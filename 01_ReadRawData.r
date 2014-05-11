@@ -1,12 +1,22 @@
 ##------------------------------------------------------------------
-## The purpose of this script is to:
-##	1. Simply read the raw data files
+## From the kaggle website:
 ##------------------------------------------------------------------
-
+## User:
+##  == "target individual" whose network is the focus of the task
+## Friend:
+##  == friend of the user ("target individual") that needs to be placed into a circle
+## Egonets:
+##  == contains "ego-network" of a user
+##  == filename in the format <userid>.egonet
+## Features:
+##  == contains "features" for all users (e.g., city, schooling, etc.)
+## Training:
+##  == contains "human-labeled" circles provided by a user
+##  == filename in the format <user>.circles
+## Testset_Users_Friends:
+##  == List of users in the test set and friends of each user
+##  == Same data as is in the <userid>.egonet files
 ##------------------------------------------------------------------
-## Load libraries
-##------------------------------------------------------------------
-##library(data.table)
 
 ##------------------------------------------------------------------
 ## Clear the workspace
@@ -19,7 +29,7 @@ rm(list=ls())
 setwd("/Users/alexstephens/Development/kaggle/social_circle/data/inputs")
 
 ##------------------------------------------------------------------
-## A vector of feature combinations
+## Read the list of all possible features
 ##------------------------------------------------------------------
 fileName            <- "featureList.txt"
 featureDict         <- readLines(fileName, n = -1)

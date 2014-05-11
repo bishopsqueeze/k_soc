@@ -10,12 +10,21 @@
 ##  == filename in the format <userid>.egonet
 ## Features:
 ##  == contains "features" for all users (e.g., city, schooling, etc.)
-## Training:
-##  == contains "human-labeled" circles provided by a user
-##  == filename in the format <user>.circles
+## [x] Training:
+##  - contains "human-labeled" circles provided by a user
+##  - filename in the format <user>.circles
+##  - a total of 60 training files
 ## Testset_Users_Friends:
 ##  == List of users in the test set and friends of each user
 ##  == Same data as is in the <userid>.egonet files
+## [x] FeatureList
+##  == List of all possible features
+##------------------------------------------------------------------
+## Goal of the project:
+##  -- You are given the egonets of 110 individuals
+##  -- You also have feature data for all individuals (and their friends)
+##  -- Of the 110 individuals, you have labelled "social circles" for 60
+##  -- The goal is to predict "social circles" for the remaining 50
 ##------------------------------------------------------------------
 
 ##------------------------------------------------------------------
@@ -29,17 +38,18 @@ rm(list=ls())
 setwd("/Users/alexstephens/Development/kaggle/social_circle/data/inputs")
 
 ##------------------------------------------------------------------
-<<<<<<< HEAD
-## Read the list of all possible features
-=======
-## Read a dictionary of possible feautres
->>>>>>> FETCH_HEAD
+## <function> trim :: to remove leading/training whitespace
 ##------------------------------------------------------------------
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+
+
+##******************************************************************
+## Step 1:  Read the list of all possible features
+##******************************************************************
 
 ## read the file
 fileName            <- "featureList.txt"
 featureDict         <- readLines(fileName, n = -1)
-
 
 ## create a prototype list of all known features
 proto.list          <- list()
@@ -49,9 +59,88 @@ for (i in 1:length(featureDict)) {
 }
 
 
-##------------------------------------------------------------------
-## Read in the features associated with a given ID. File in the format:
-##------------------------------------------------------------------
+##******************************************************************
+## Step 1:  Read in the "social circle" training data
+##******************************************************************
+
+## read the filenames
+trainingFiles       <- dir("./training", pattern=".circles")
+
+## define a list to hold the combined results
+known_circles       <- list()
+
+## loop over all of the files and load the known_circles
+for (i in 1:length(trainingFiles)) {
+    
+    ## read the file (and extract some basic data)
+    tmp.file        <- trainingFiles[i]                                         ## the file to read
+    tmp.userid      <- strsplit(tmp.file, "[.]")[[1]][1]                        ## the user who's circles are identified
+    tmp.id          <- paste("ID_",tmp.userid,sep="")                           ## a user-based ID = "ID_<userid>"
+    tmp.rl          <- readLines(paste("./training/",tmp.file,sep=""), n = -1)  ## a character vector of the file contents
+    tmp.num_circles <- length(tmp.rl)                                           ## the number of circles
+    
+    ## loop over each of the circles and load a list
+    for (j in 1:tmp.num_circles) {
+        
+        ## extract the circle ID
+        tmp.circle_id       <- strsplit( tmp.rl[j], "[:]")[[1]][1]
+        tmp.circle_members  <- trim(strsplit(tmp.rl[j], "[:]")[[1]][2])
+        
+        ## define the list
+        known_circles[[tmp.id]][[tmp.circle_id]]    <- list()
+        
+        ## extract the members associated with the circle
+        if (tmp.circle_members  == "" ) {
+            known_circles[[tmp.id]][[tmp.circle_id]]  <- -99999
+        } else {
+            known_circles[[tmp.id]][[tmp.circle_id]]  <- as.vector(as.integer(strsplit(trim(strsplit(tmp.rl[j], "[:]")[[1]][2]), " ")[[1]]))
+        }
+    }
+}
+
+
+##******************************************************************
+## Step 2: Read in the egonets
+##******************************************************************
+
+## read the filenames
+egonetFiles    <- dir("./egonets", pattern=".egonet")
+
+## define a list to hold the combined results
+egonets       <- list()
+
+for (i in 1:length(egonetFiles)) {
+
+    ## read the file (and extract some basic data)
+    tmp.file        <- egonetFiles[i]                                           ## the file to read
+    tmp.userid      <- strsplit(tmp.file, "[.]")[[1]][1]                        ## the user who's circles are identified
+    tmp.id          <- paste("ID_",tmp.userid,sep="")                           ## a user-based ID = "ID_<userid>"
+    tmp.rl          <- readLines(paste("./egonets/",tmp.file,sep=""), n = -1)  ## a character vector of the file contents
+    tmp.num_friends <- length(tmp.rl)                                           ## the number of circles
+
+    ## loop over each of the lines and load a list
+    for (j in 1:tmp.num_friends) {
+
+        ## extract the friend ID
+        tmp.friend_id           <- paste("FR_",strsplit( tmp.rl[j], "[:]")[[1]][1],sep="")
+        tmp.friends_of_friend   <- trim(strsplit(tmp.rl[j], "[:]")[[1]][2])
+        
+        ## define the list
+        egonets[[tmp.id]][[tmp.friend_id]]    <- list()
+         
+        ## extract the friends associated with this friend
+        if ( tmp.friends_of_friend == "" ) {
+            egonets[[tmp.id]][[tmp.friend_id]]    <- -99999
+        } else {
+            egonets[[tmp.id]][[tmp.friend_id]]    <- as.vector(as.integer(strsplit(tmp.friends_of_friend, " ")[[1]]))
+        }
+    }
+}
+
+
+##******************************************************************
+## Step 3:  Read in the feature list for *all* users/friends
+##******************************************************************
 ## <id>
 ## <feature_1><value_1>
 ## ...
@@ -72,16 +161,16 @@ fileName            <- "features.txt"
 features.rl         <- readLines(fileName, n = -1)
 
 ## use sapply & strsplit to break each string into a set of id + feature/value pairs
-features.list       <- sapply(features.rl, strsplit, " ")
+split.list          <- sapply(features.rl, strsplit, " ")
 
 ## create a list to hold the set of feature/values for each id
-fv.list <- list()
+features.list <- list()
 
 ## loop over each element in the features list and load into a prototype list
-for (i in 1:length(features.list)) {
+for (i in 1:length(split.list)) {
     
     ## grab the features for this id
-    tmp.vec     <- features.list[[i]]
+    tmp.vec     <- split.list[[i]]
     tmp.len     <- length(tmp.vec)
     tmp.proto   <- proto.list
     
@@ -104,47 +193,39 @@ for (i in 1:length(features.list)) {
     }
     
     ## copy the prototype into the main fv.list
-    fv.list[[i]] <- tmp.proto
+    features.list[[i]] <- tmp.proto
  
 }
 
 
-##------------------------------------------------------------------
-## Read in the egonets
-##------------------------------------------------------------------
-egonetFiles    <- dir("./egonets", pattern=".egonet")
-
-#for (i in 1:length(egonetFiles)) {
-for (i in 1:1) {
-    
-    tmp.file    <- egonetFiles[i]
-    tmp.rl      <- readLines(paste("./egonets/",tmp.file,sep=""), n = -1)
-
-}
-
-
-##------------------------------------------------------------------
-## Read in the training data
-##------------------------------------------------------------------
-trainingFiles    <- dir("./training", pattern=".circles")
-
-#for (i in 1:length(egonetFiles)) {
-for (i in 1:1) {
-    
-    tmp.file    <- trainingFiles[i]
-    tmp.rl      <- readLines(paste("./training/",tmp.file,sep=""), n = -1)
-    
-}
-
-
-##------------------------------------------------------------------
-## Read in the testset_users data
-##------------------------------------------------------------------
+##******************************************************************
+## Step 4:  Read in a (redundant) file of test user friends. Similar
+##          data is housed in the <userid>.egonets file, but this
+##          is useful to cross-check those results
+##******************************************************************
 
 ## read the file
 fileName            <- "testSet_users_friends.csv"
 testUsers.rl        <- readLines(fileName, n = -1)
 
+## create a list to hold the results
+testUsers.list      <- list()
+
+## for each line in the file, extract the userid and its list of friends ids
+for (i in 1:length(testUsers.rl)) {
+    tmp.line            <- testUsers.rl[i]
+    tmp.userid          <- strsplit(tmp.line, "[:]")[[1]][1]                                ## the user who's circles are identified
+    tmp.id              <- paste("ID_",tmp.userid,sep="")                                   ## a user-based ID = "ID_<userid>"
+    testUsers.list[[tmp.id]] <- as.vector(as.integer(strsplit(trim(strsplit(tmp.line, "[:]")[[1]][2]), " ")[[1]]))
+
+}
+
+##******************************************************************
+## Step 5:  Save the results
+##******************************************************************
+save(egonets, featureDict, features.list, known_circles, testUsers.list, file="01_SocialCircle_RawData.Rdata")
 
 
-## Note:  a person can have multiple entries for (probably) a subset of the field (like education;year;name)
+
+
+

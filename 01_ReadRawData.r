@@ -67,7 +67,7 @@ for (i in 1:length(featureDict)) {
 trainingFiles       <- dir("./training", pattern=".circles")
 
 ## define a list to hold the combined results
-known_circles       <- list()
+known_circles.list       <- list()
 
 ## loop over all of the files and load the known_circles
 for (i in 1:length(trainingFiles)) {
@@ -87,13 +87,13 @@ for (i in 1:length(trainingFiles)) {
         tmp.circle_members  <- trim(strsplit(tmp.rl[j], "[:]")[[1]][2])
         
         ## define the list
-        known_circles[[tmp.id]][[tmp.circle_id]]    <- list()
+        known_circles.list[[tmp.id]][[tmp.circle_id]]    <- list()
         
         ## extract the members associated with the circle
         if (tmp.circle_members  == "" ) {
-            known_circles[[tmp.id]][[tmp.circle_id]]  <- -99999
+            known_circles.list[[tmp.id]][[tmp.circle_id]]  <- -99999
         } else {
-            known_circles[[tmp.id]][[tmp.circle_id]]  <- as.vector(as.integer(strsplit(trim(strsplit(tmp.rl[j], "[:]")[[1]][2]), " ")[[1]]))
+            known_circles.list[[tmp.id]][[tmp.circle_id]]  <- as.vector(as.integer(strsplit(trim(strsplit(tmp.rl[j], "[:]")[[1]][2]), " ")[[1]]))
         }
     }
 }
@@ -107,7 +107,7 @@ for (i in 1:length(trainingFiles)) {
 egonetFiles    <- dir("./egonets", pattern=".egonet")
 
 ## define a list to hold the combined results
-egonets       <- list()
+egonets.list       <- list()
 
 for (i in 1:length(egonetFiles)) {
 
@@ -126,13 +126,13 @@ for (i in 1:length(egonetFiles)) {
         tmp.friends_of_friend   <- trim(strsplit(tmp.rl[j], "[:]")[[1]][2])
         
         ## define the list
-        egonets[[tmp.id]][[tmp.friend_id]]    <- list()
+        egonets.list[[tmp.id]][[tmp.friend_id]]    <- list()
          
         ## extract the friends associated with this friend
         if ( tmp.friends_of_friend == "" ) {
-            egonets[[tmp.id]][[tmp.friend_id]]    <- -99999
+            egonets.list[[tmp.id]][[tmp.friend_id]]    <- -99999
         } else {
-            egonets[[tmp.id]][[tmp.friend_id]]    <- as.vector(as.integer(strsplit(tmp.friends_of_friend, " ")[[1]]))
+            egonets.list[[tmp.id]][[tmp.friend_id]]    <- as.vector(as.integer(strsplit(tmp.friends_of_friend, " ")[[1]]))
         }
     }
 }
@@ -223,7 +223,7 @@ for (i in 1:length(testUsers.rl)) {
 ##******************************************************************
 ## Step 5:  Save the results
 ##******************************************************************
-save(egonets, featureDict, features.list, known_circles, testUsers.list, file="01_SocialCircle_RawData.Rdata")
+save(egonets.list, featureDict, features.list, known_circles.list, testUsers.list, file="01_SocialCircle_RawData.Rdata")
 
 
 

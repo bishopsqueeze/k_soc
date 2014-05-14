@@ -70,7 +70,12 @@ circlesP = {}
 for gl, pl in zip(gLines, pLines):
   uidG,friendsG = gl.split(',')
   uidP,friendsP = pl.split(',')
-  circlesG[int(uidG)] = [set([int(x) for x in c.split()]) for c in friendsG.split(';')]
+  circlesG[int(uidG)] = [
+                         set(
+                            [int(x) for x in c.split()]
+                             )
+                         for c in friendsG.split(';')
+                         ]
   circlesP[int(uidP)] = [set([int(x) for x in c.split()]) for c in friendsP.split(';')]
 
 totalLoss = 0

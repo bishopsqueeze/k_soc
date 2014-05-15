@@ -24,7 +24,7 @@ load("py_connected_components.Rdata")
 
 
 ##------------------------------------------------------------------
-## Step 1:  User the <igraph> package to reproduce the python example
+## Step 1:  Use the <igraph> package to reproduce the python example
 ##------------------------------------------------------------------
 
 ## define egonets data

@@ -153,7 +153,18 @@ for (i in 1:length(egonetFiles)) {
 ##  education;concentration;id;0 education;year;name;1 education;year;id;1
 ##  id;0 location;name;0 location;id;0"
 ##------------------------------------------------------------------
-## Note that there can be repeats of a given feature
+## Inputs:
+##
+## Outputs:
+##  The primary outputs here are two separate lists:
+##    features.list:
+##      Contains the non-null set of features for a user.
+##      When there are multiple values for that feature, then we
+##      append those values to what's already there.  So a user can
+##      have several people tagged as being in the same class.
+##    leaves.list:
+##      Contains the unsplit feature/value pairs associated with a
+##      users.
 ##------------------------------------------------------------------
 
 ## read the file
@@ -164,36 +175,46 @@ features.rl         <- readLines(fileName, n = -1)
 split.list          <- sapply(features.rl, strsplit, " ")
 
 ## create a list to hold the set of feature/values for each id
-features.list <- list()
+features.list       <- list()
+leaves.list         <- list()
+
+## hold a count of features per user
+featPerUser.vec     <- vector(, length=length(split.list))
 
 ## loop over each element in the features list and load into a prototype list
 for (i in 1:length(split.list)) {
     
     ## grab the features for this id
-    tmp.vec     <- split.list[[i]]
+    tmp.vec     <- sort(split.list[[i]])   ## includes the id and the features
     tmp.len     <- length(tmp.vec)
-    tmp.proto   <- proto.list
     
-    ## create vectors
-    feature.vec <- vector(, length=tmp.len)
-    value.vec   <- vector(, length=tmp.len)
+    ## retain the number of features, but exclude the id from the  count
+    featPerUser.vec[i]  <- tmp.len - 1
     
+    ## initialize a list to hold output
+    tmp.proto           <- NULL
+
     ## loop over the set of values and load them into the prototype list
+    ## each feature/value pair has the form "node1;node2;...;nodeN;value"
+    ## so we need to split that into the two separate components
     for (j in 2:tmp.len) {
         
         tmp.pair    <- unlist(strsplit(tmp.vec[j], ";"))
         tmp.value   <- tmp.pair[length(tmp.pair)]
         tmp.feature <- paste( tmp.pair[1:(length(tmp.pair)-1)], collapse=";")
         
-        if ( sum(is.na(tmp.proto[[tmp.feature]])) == 1 ) {
-            tmp.proto[[tmp.feature]][is.na(tmp.proto[[tmp.feature]])] <- tmp.value
+        ## grow a tree/list and append values to each of the leafs
+        if ( is.null(tmp.proto) ) {
+            tmp.proto   <- list()
+            tmp.proto[[tmp.feature]] <- as.integer(tmp.value)
         } else {
-            tmp.proto[[tmp.feature]] <- c(tmp.proto[[tmp.feature]], tmp.value)
+            tmp.proto[[tmp.feature]] <- c(tmp.proto[[tmp.feature]], as.integer(tmp.value))
         }
     }
     
-    ## copy the prototype into the main fv.list
-    features.list[[i]] <- tmp.proto
+    ## copy the prototype into the main features list
+    features.list[[i]]  <- tmp.proto
+    leaves.list[[i]]    <- tmp.vec[2:length(tmp.vec)]
  
 }
 
@@ -223,7 +244,14 @@ for (i in 1:length(testUsers.rl)) {
 ##******************************************************************
 ## Step 5:  Save the results
 ##******************************************************************
-save(egonets.list, featureDict, features.list, known_circles.list, testUsers.list, file="01_SocialCircle_RawData.Rdata")
+save(   egonets.list,
+        featureDict,
+        features.list,
+        leaves.list,
+        known_circles.list,
+        testUsers.list,
+        featPerUser.vec,
+        file="01_SocialCircle_RawData.Rdata")
 
 
 

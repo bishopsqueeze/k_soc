@@ -87,7 +87,7 @@ cat("Total number of unique friends == ", length(unique(egonets.ids)))
 
 ## extract id information from the features.list file
 features.ids    <- sort(as.integer(unlist(lapply(features.list, function(x){x$id}))))
-cat("Total number of features == ", length(features.ids))
+cat("Total number of feature ids == ", length(features.ids))
 
 ## extract the id information from the egonets file
 users.ids       <- sort( as.integer(gsub("ID_","",names(egonets.list))) )

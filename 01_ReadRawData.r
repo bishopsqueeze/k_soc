@@ -122,7 +122,7 @@ for (i in 1:length(egonetFiles)) {
     for (j in 1:tmp.num_friends) {
 
         ## extract the friend ID
-        tmp.friend_id           <- paste("FR_",strsplit( tmp.rl[j], "[:]")[[1]][1],sep="")
+        tmp.friend_id           <- paste("ID_",strsplit( tmp.rl[j], "[:]")[[1]][1],sep="")
         tmp.friends_of_friend   <- trim(strsplit(tmp.rl[j], "[:]")[[1]][2])
         
         ## define the list
@@ -187,6 +187,7 @@ for (i in 1:length(split.list)) {
     ## grab the features for this id
     tmp.vec     <- sort(split.list[[i]])   ## includes the id and the features
     tmp.len     <- length(tmp.vec)
+    tmp.id      <- paste("ID_",tmp.vec[1],sep="")
     
     ## retain the number of features, but exclude the id from the  count
     featPerUser.vec[i]  <- tmp.len - 1
@@ -213,8 +214,8 @@ for (i in 1:length(split.list)) {
     }
     
     ## copy the prototype into the main features list
-    features.list[[i]]  <- tmp.proto
-    leaves.list[[i]]    <- tmp.vec[2:length(tmp.vec)]
+    features.list[[tmp.id]]  <- tmp.proto
+    leaves.list[[tmp.id]]    <- tmp.vec[2:length(tmp.vec)]
  
 }
 

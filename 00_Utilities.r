@@ -126,10 +126,31 @@ circleEdits  <- function(trueCircles, predCircles)
 
 
 
+
+##
+circleBalancedErrorRate <- function(trueCircle, predCircle)
+{
+    ## error check
+    if (!is.list(trueCircles) || any(unlist(trueCircles) < 0)) {
+        stop("trueCircles must be a list with nonnegative entries.")
+    }
+    if (!is.list(predCircles) || any(unlist(predCircles )< 0)) {
+        stop("predCircles must be a list with nonnegative entries.")
+    }
+
+    ## 0.5 * ( (( pred \ true ) / pred) + ((true \ pred) / true) )
+    #
+    # need to confirm the denominator
+    #
+    #0.5*( length(setdiff(true, pred))/length(true) + length(setdiff(pred, true))/length(pred) )
+    
+}
+
 ## test cases for a given set of circles
 ## t    <- list(t1=c(4,5), t2=c(1,2,3,4), t3=c(2,3))            ## truth
 ## p1   <- list(p1=c(1,2,3,4,5))                                ## all in one circle (5 edits)
 ## p2   <- list(p1=c(1), p2=c(2), p3=c(3), p4=c(4), p5=c(5))    ## each in a circle (7 edits)
+
 
 
 

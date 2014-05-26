@@ -98,3 +98,35 @@ egonets.uniq    <- unique(egonets.comb)
 
 cat("Total number of combined egonet friends == ", length(egonets.comb))
 cat("Total number of combined unique friends == ", length(egonets.uniq))
+
+
+
+
+
+##------------------------------------------------------------------
+## Test 3:  Count the number of circles and the number per circle
+##------------------------------------------------------------------
+
+## Loop over the "ground truth" and capture the number of circles
+## and the average number of friends per circle
+circleSummary <- lapply(known_circles.list, function(x)
+{
+    
+    d <- unlist(lapply(x, function(z){
+        return(list(num=length(z)))
+    }))
+
+    
+    return(list(len=length(d), avg=mean(d)))
+})
+circleSummary <- matrix(unlist(circleSummary),ncol=2,byrow=TRUE)
+colnames(circleSummary) <- c("num_circles","avg_cirlce_pop")
+
+## On average there are 10 circles per user & 28 friends per circle
+## - Min/Max number of circles 3/28
+## - Min/Max number of friends per circle 6.25/68.70
+
+
+
+
+

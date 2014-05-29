@@ -38,9 +38,9 @@ rm(list=ls())
 setwd("/Users/alexstephens/Development/kaggle/social_circle/data/inputs")
 
 ##------------------------------------------------------------------
-## <function> trim :: to remove leading/training whitespace
+## Load utility functions
 ##------------------------------------------------------------------
-trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+source("/Users/alexstephens/Development/kaggle/social_circle/k_soc/00_Utilities.r")
 
 
 ##******************************************************************
@@ -52,11 +52,11 @@ fileName            <- "featureList.txt"
 featureDict         <- readLines(fileName, n = -1)
 
 ## create a prototype list of all known features
-proto.list          <- list()
-for (i in 1:length(featureDict)) {
-    tmp.feature               <- featureDict[i]
-    proto.list[[tmp.feature]] <- NA
-}
+#proto.list          <- list()
+#for (i in 1:length(featureDict)) {
+#    tmp.feature               <- featureDict[i]
+#    proto.list[[tmp.feature]] <- NA
+#}
 
 
 ##******************************************************************
@@ -241,6 +241,7 @@ for (i in 1:length(testUsers.rl)) {
     testUsers.list[[tmp.id]] <- as.vector(as.integer(strsplit(trim(strsplit(tmp.line, "[:]")[[1]][2]), " ")[[1]]))
 
 }
+
 
 ##******************************************************************
 ## Step 5:  Save the results

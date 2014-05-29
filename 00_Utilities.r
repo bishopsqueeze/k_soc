@@ -126,6 +126,102 @@ circleEdits  <- function(trueCircles, predCircles)
 
 
 
+##------------------------------------------------------------------
+## <function> :: convert.magic
+##------------------------------------------------------------------
+## A function to perform a type switch on a data.frame
+##------------------------------------------------------------------
+convert.magic   <- function(obj, col, type) {
+    
+    ## isolate the columns to convert
+    idx <- which(colnames(obj) %in% col)
+    
+    ## loop over the columns and convert via a swtich()
+    for (i in 1:length(idx)) {
+        FUN <- switch(type[i], character = as.character, numeric = as.numeric, factor = as.factor, integer = as.integer)
+        obj[, idx[i]]   <- FUN(obj[, idx[i]])
+    }
+    return(obj)
+}
+
+
+
+
+convEgonetListToIgraphObject   <- function(myEgonet)
+{
+    nodes.num   <- length(myEgonet)
+    edges.df    <- data.frame()
+    
+    ## for each node in the list, strip the ID tag and load edges
+    for (i in 1:nodes.num) {
+        node        <- gsub("ID_","",names(myEgonet)[i])
+        edges       <- gsub("ID_","",myEgonet[[i]])
+        edges.df    <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
+    }
+    
+    return(graph.data.frame(edges.df, directed=FALSE))
+}
+
+
+
+
+calcSimilarityMatrix <- function(myIgraph)
+{
+    ## load the edges and define an output matrix
+    edges       <- get.data.frame(myIgraph, what="edges")
+    edges.num   <- nrow(edges)
+    edges.perm  <- combs(1:edges.num, 2)
+    sim.vec     <- vector(,length=nrow(edges.perm))
+    sim.mat     <- matrix(1,nrow=edges.num, ncol=edges.num)
+    
+    ## compute the similarity matrix
+    #for (i in 1:edges.num) {
+        #for (j in 1:edges.num) {
+    for (i in 1:nrow(edges.perm)) {
+        
+            ## get the edges to compare
+            ei  <- get.edge(myIgraph,id=edges.perm[i,1])
+            ej  <- get.edge(myIgraph,id=edges.perm[i,2])
+            
+            ## define a dummy keystone
+            keystone <- -1
+            
+            ## cases where there is a keystone
+            if (ei[1] == ej[1]) {
+                keystone <- ei[1]
+                tmp.i    <- ei[2]
+                tmp.j    <- ej[2]
+            } else if (ei[1]==ej[2]) {
+                keystone <- ei[1]
+                tmp.i    <- ei[2]
+                tmp.j    <- ej[1]
+            } else if (ei[2]==ej[1]) {
+                keystone <- ei[2]
+                tmp.i    <- ei[1]
+                tmp.j    <- ej[2]
+            } else if (ei[2]==ej[2]) {
+                keystone <- ei[2]
+                tmp.i    <- ei[1]
+                tmp.j    <- ej[1]
+            }
+            
+            ## if there is a keystone, then compute the Jaccard coefficient
+            if (!(keystone == -1)) {
+                np_i     <- c(keystone, tmp.i, neighbors(myIgraph, tmp.i))
+                np_j     <- c(keystone, tmp.j, neighbors(myIgraph, tmp.j))
+                #sim[i,j] <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
+                sim.vec[i] <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
+            }
+            #}
+    }
+    sim.mat[lower.tri(sim.mat)] <- sim.vec
+    colnames(sim.mat) <- paste("idx",1:edges.num,sep="")
+    rownames(sim.mat) <- paste("idx",1:edges.num,sep="")
+    return(sim.mat)
+}
+
+
+
 
 ##
 circleBalancedErrorRate <- function(trueCircle, predCircle)

@@ -1,9 +1,14 @@
 ##------------------------------------------------------------------
-##
+## The purpose of this script is to re-create an example set of
+## clusters.  The example (the Les Miserables characters) set of
+## edges is taken from Ahn, and there is an R package that will
+## reproduce that results (linkcomm()).  I want to reproduce it
+## as well because I will be modifying the basic result (i.e.,
+## a similarity matrix to reproduce the Ye [?] et al. paper.
 ##------------------------------------------------------------------
 
 ##------------------------------------------------------------------
-## Clear the workspace
+## Load libraries
 ##------------------------------------------------------------------
 library(igraph)                 ## contains graph functions
 library(linkcomm)               ## contains link community functions
@@ -16,42 +21,26 @@ librart(gdata)
 ##------------------------------------------------------------------
 rm(list=ls())
 
-
 ##------------------------------------------------------------------
-## <function> :: convert.magic
+## Load utility functions
 ##------------------------------------------------------------------
-## A function to perform a type switch on a data.frame
-##------------------------------------------------------------------
-convert.magic   <- function(obj, col, type) {
-    
-    ## isolate the columns to convert
-    idx <- which(colnames(obj) %in% col)
-    
-    ## loop over the columns and convert via a swtich()
-    for (i in 1:length(idx)) {
-        FUN <- switch(type[i], character = as.character, numeric = as.numeric, factor = as.factor, integer = as.integer)
-        obj[, idx[i]]   <- FUN(obj[, idx[i]])
-    }
-    return(obj)
-}
-
+source("/Users/alexstephens/Development/kaggle/social_circle/k_soc/00_Utilities.r")
 
 
 ##------------------------------------------------------------------
-## Example 1: Les Miserables characters
-##
-## This example is also included in the Ahn paper on link communities
+## Benchmark: Les Miserables characters connected graph
 ##------------------------------------------------------------------
 
-## load the dataset
+## load the raw dataset (from linkcomm())
 lm <- lesmiserables
 
 ##------------------------------------------------------------------
-## this is somewhat redundant, but translate the factor/edge list
-## into a egonet like what is used in the kaggle competition
+## Step 1:  This is somewhat redundant, but translate the Les Mis
+## factor/edge list into the egonet structure that I've loaded
+## from the kaggle competition.
 ##------------------------------------------------------------------
 
-## convert the factors into character
+## convert the data of factors into characters
 tmp.lm <- convert.magic(lm, c("V1","V2"), c("character","character"))
 
 ## map character names to integers
@@ -73,269 +62,107 @@ for (i in 1:length(nodes_l.uniq)) {
     
     ## get the list of characters (and their ids) associated with this vertex
     lm.egonet[[char.id]] <- paste("ID_", characters.ids[ which(characters.uniq %in% tmp.lm$V2[which(tmp.lm$V1 == tmp.node)]) ], sep="")
-
 }
 
-
-
-
-convEgonetListToEdgeDataFrame   <- function(myEgonet)
-{
-    nodes.num   <- length(myEgonet)
-    edges.df    <- data.frame()
-    
-    ## clunky
-    for (i in 1:nodes.num) {
-        node_l      <- gsub("ID_","",names(myEgonet)[i])
-        edges       <- gsub("ID_","",myEgonet[[i]])
-        edges.df    <- rbind(edges.df, data.frame(E1=rep(node_l, length(edges)), E2=edges))
-    }
-    
-    return(graph.data.frame(edges.df, directed=FALSE))
-    
-}
-
-a <- convEgonetListToEdgeDataFrame(lm.egonet)
-
-
-calcSimilarityMatrix <- function(myIgraph)
-{
-    edges       <- get.data.frame(myIgraph, what="edges")
-    edges.num   <- nrow(edges)
-    edges.perm  <- combs(1:edges.num,2)
-    #sim         <- vector("numeric",length=nrow(edges.perm))
-    sim         <- matrix(0,nrow=edges.num, ncol=edges.num)
-    
-    for (i in 1:edges.num) {
-        for (j in 1:edges.num) {
-        
-            ## get the sample edges
-            ei  <- get.edge(myIgraph,id=i)
-            ej  <- get.edge(myIgraph,id=j)
- 
-            ## keystone
-            keystone <- -1
- 
-            if (ei[1] == ej[1]) {
-                keystone <- ei[1]
-                tmp.i    <- ei[2]
-                tmp.j    <- ej[2]
-            } else if (ei[1]==ej[2]) {
-                keystone <- ei[1]
-                tmp.i    <- ei[2]
-                tmp.j    <- ej[1]
-            } else if (ei[2]==ej[1]) {
-                keystone <- ei[2]
-                tmp.i    <- ei[1]
-                tmp.j    <- ej[2]
-            } else if (ei[2]==ej[2]) {
-                keystone <- ei[2]
-                tmp.i    <- ei[1]
-                tmp.j    <- ej[1]
-            }
-            
-            if (!(keystone == -1)) {
-                
-                np_i     <- c(keystone, tmp.i, neighbors(myIgraph, tmp.i))
-                np_j     <- c(keystone, tmp.j, neighbors(myIgraph, tmp.j))
-                sim[i,j] <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j)))## + 0.000001*runif(1)
-                
-            }
-        }
-    }
-    return(sim)
-}
-
-
-tmp <- graph.data.frame(rbind(  c(1,3),c(1,2),c(2,4),
-                                c(2,5),c(2,6),c(2,7),
-                                c(2,8),c(2,9),c(2,10),
-                                c(3,8),c(3,9),c(3,10),
-                                c(3,11),c(3,12)), directed=FALSE)
-
-
-tmp <- graph.data.frame(rbind(c(1,3),c(1,2),c(2,3)), directed=FALSE)
-
-b <- calcSimilarityMatrix(a)
-d <- as.dist(1-b)
-m <- hclust(d, method="single")
-
-
-
-
+##------------------------------------------------------------------
+## Step 2:  At this point, the Les Mis data are in a format that
+## is similar to the loaded kaggle data format. Load the raw data
+## into an igraph object
+##------------------------------------------------------------------
+lm.igraph   <- convEgonetListToIgraphObject(lm.egonet)
 
 
 ##------------------------------------------------------------------
-## Set the working directory
+## Step 3:  Compute the dissimilarity measure amongst the clusters.
+## The similarity measure is the Jaccard coefficient. The Jaccard
+## *distance* is 1 minus the Jaccard coefficient.
 ##------------------------------------------------------------------
-setwd("/Users/alexstephens/Development/kaggle/social_circle/data/inputs")
 
-loadLinkCommunityMatrix <- function(myId, myFriends, myEgonet)
-{
-    friends.num <- length(myFriends)
-    link.mat    <- matrix(0, nrow=friends.num, ncol=friends.num)
-    
-    vertex.id   <- as.integer(strsplit(myId, "_")[[1]][2])
-    
-    for (i in 1:friends.num) {
-        for (j in 1:friends.num) {
-            
-            i.id            <- as.integer(strsplit(myFriends[i], "_")[[1]][2])
-            j.id            <- as.integer(strsplit(myFriends[j], "_")[[1]][2])
-            
-            friends_i.ids   <- myEgonet[[myFriends[i]]]
-            friends_j.ids   <- myEgonet[[myFriends[j]]]
-            
-            np_i    <- c(vertex.id, i.id, friends_i.ids)
-            np_j    <- c(vertex.id, j.id, friends_j.ids)
-            
-            link.mat[i,j]   <- length(intersect(np_i, np_j))/length(union(np_i, np_j))
-        }
-    }
-    colnames(link.mat)  <- myFriends
-    rownames(link.mat)  <- myFriends
-    return(as.data.frame(link.mat))
-}
+lm.sim      <- calcSimilarityMatrix(lm.igraph)  ## similarity matrix
+lm.dis      <- 1 - lm.sim                       ## jaccard distance
 
+##------------------------------------------------------------------
+## Step 3:  Compute the cluster
+##------------------------------------------------------------------
 
-## at this point, you have an ego network list like what you have in
-## in the processed kaggle data
-
-u.egonet    <- lm.ego
-
-## looks like you'll need to reshape the egonet to construct a complete
-## set of edges
-##
-## Current:
-##  V1  -> {E11, E12, ... , E1N}
-##  V2  -> {E21, E22, ... , E2P}
-##  ..
-##
-## Problem is that not all of the unique edges have a vertex ???
-
-## For example, the following are in the V2 column of the LesMis
-## file but not the V1 column
-lm.v2notv1  <- unique(lm$V2[which(!(lm$V2 %in% lm$V1))])
-
-
-## function to take ego network and construct a complete set of edges
-
-ego.ids <- as.integer(gsub("ID_","",names(lm.ego)))
-
-## construct a vertex/edge dataframe
-ego.df  <- data.frame()
-for (i in 1:length(names(lm.ego))) {
-    tmp.vertex  <- as.integer(gsub("ID_","",names(lm.ego)[i]))
-    tmp.edges   <- lm.ego[[names(lm.ego)[i]]]
-    ego.df      <- rbind(ego.df, data.frame(V=rep(tmp.vertex,length(tmp.edges)), E=tmp.edges))
-    
-}
-
-
-ego.ig  <- graph.data.frame(ego.df, directed=FALSE)
-vcount(ego.ig)
-ecount(ego.ig)
-
-
-## loop over each EDGE in the network and compute the similarity matrix
-
-
-loadLinkCommunityMatrix <- function(myVertices, myIgraph)
-{
-    edges.num   <- length(myVertices)
-    link.mat    <- matrix(0, nrow=edges.num, ncol=edges.num)
-    
-    vertex.id   <- 999999
-    
-    for (i in 1:edges.num) {
-        
-        edge.i  <- get.edge(myIgraph, id=i)
-        
-        for (j in 1:edges.num) {
-            
-            edge.j  <- get.edge(myIgraph, id=j)
-            
-            ## The Jaccard similarity coefficient of two vertices is
-            ## the number of common neighbors divided by
-            ## the number of vertices that are neighbors of at least
-            ## one of the two vertices being considered.
-            
-            np_i    <- neighbors(myIgraph, edge.i[1])
-            np_j    <- neighbors(myIgraph, edge.j[1])
-            
-            link.mat[i,j]   <- length(intersect(np_i, np_j))/length(union(np_i, np_j))
-        }
-    }
-    #colnames(link.mat)  <- paste("ID_",edge.i,".","ID_",edge.j,sep="")
-    #rownames(link.mat)  <- colnames(link.mat)
-    return(as.data.frame(link.mat))
-}
-
-## test graph
-#v1 <- data.frame(V=rep(100,7), E=1:7)
-#v2 <- data.frame(V=rep(101,5), E=5:9)
-#vtest <- rbind(v1, v2)
-#gtest <- graph.data.frame(vtest, directed=FALSE, vertices=V)
-
-
-## isolate the friends
-#friends.num <- length(ego.new)
-#friends.ids <- names(ego.new)
-
-## load the link community matrix
-u.linkCommunity    <- loadLinkCommunityMatrix(ego.df[,1], ego.ig)
-
+## create a distance object from the dissimilarity matrix
+lm.dist     <- as.dist(lm.dis)
 
 ## compute a cluster
-u.dist  <- dist(u.linkCommunity)
-u.clust <- hclust(u.dist, method = "single", members = NULL)
-d.clust <- as.dendrogram(u.clust)
+lm.clust    <- hclust(lm.dist, method="single")
+lm.dend     <- as.dendrogram(lm.clust)
 
 
-## clusters per height
-h           <- get_branches_heights(d.clust)
-h.num       <- length(h)
-h.mat       <- matrix(0,nrow=h.num,ncol=10)
+##------------------------------------------------------------------
+## Step 4:  Verify cluster output using linkcomm() [ok]
+##------------------------------------------------------------------
 
-for (i in 1:h.num) {
-    
-    tmp.h   <- h[i]
-    tmp.cut <- cutree(u.clust, h=tmp.h)
-    
-    tmp.nclust  <- unique(tmp.cut)
-    
-    
-    tmp.count <- sapply(tmp.nclust, function(x) {
-        tmp.idx <- which(tmp.cut == x)
-        tmp.len <- length(tmp.idx)
-        tmp.names <- names(tmp.idx)
-        
-        tmp.uniq    <- length(unique(as.integer(unlist(sapply(gsub("ID_","",tmp.names), strsplit, "\\.")))))
+## use linkcomm() to compute the cluster
+lm.lc       <- getLinkCommunities(get.data.frame(lm.igraph,"edges"), hcmethod="single")
+comp.clust  <- cbind(lm.lc$hclust$height, lm.clust$height, lm.lc$hclust$height-lm.clust$height)
 
-        return(list(len=tmp.len, unq=tmp.uniq))
-    })
-    tmp.count   <- t(tmp.count)
+
+##------------------------------------------------------------------
+## Step 4:  Verify cluster output using linkcomm() [ok]
+##------------------------------------------------------------------
+
+hh <- unique(round(lm.clust$height, digits = 5)) # Round to 5 digits to prevent numerical instability affecting community formation.
+
+## just counts the number of edges at each height
+## number of heights = 50
+## sum of countClusters = 253 = distance lenght
+countClusters <- function(x, ht)
+{
+    return(length(which(ht==x)))
+}
+clusnums <- sapply(hh, countClusters, ht = round(lm.clust$height, digits = 5)) # Number of clusters at each height.
+
+## want to find the "optimal" height using the cluster density
+
+
+
+#for (i in 1:length(unique(lm.clust$height))) {
+
+
+    tmp.height  <- unique(lm.clust$height)[20]
+    tmp.clus    <-  cutree(lm.clust, h=tmp.height)
     
-    mc          <- unlist(tmp.count[,1])
-    nc          <- unlist(tmp.count[,2])
-    
-    dc          <- ifelse(nc == 2, 0, (mc-(nc-1)/(0.5*(nc*(nc-1)) - (nc-1))))
-    wc          <- mc / sum(mc)
-    
-    
-    h.mat[i,1]  <- tmp.h
-    h.mat[i,2]  <- wc %*% dc
-    
+#}
+
+
+
+## define a matrix to hold cluster membership at each height
+hgts        <- unique(lm.clust$height)
+hgts.num    <- length(hgts)
+edges.num   <- nrow(get.edgelist(lm.igraph))
+
+## define & load the matrix
+tmp.mat <- matrix(0, nrow=edges.num, ncol=hgts.num)
+for (i in 1:hgts.num) {
+    tmp.mat[,i] <- as.vector(cutree(lm.clust, h=hgts[i]))
 }
 
+## get the number of groups at each height
+groups.vec <- vector(, length=hgts.num)
+for (i in 1:hgts.num) {
+    groups.vec[i] <- length(unique(tmp.mat[,i]))
+}
 
+## loop over each height and then the groups
 
-## similar data from linkcomm() ???
-lc <- getLinkCommunities(tmp.lm, hcmethod="single")
+for (i in 1:hgts.num) {
+    
+    groups.uniq <- unique(tmp.mat[,i])
+    groups.num  <- length(groups.uniq)
 
-lc2 <- getLinkCommunities(tmp.lm, hcmethod="single", dist=as.dist(b))
-
-lc3 <- getLinkCommunities(get.data.frame(a,"edges"), hcmethod="single")
+    for (j in 1:groups.num) {
+        
+        tmp.idx     <- which(tmp.mat[,i] == groups.num[j])
+        tmp.memb    <- union(get.edgelist(lm.igraph)[tmp.idx,1], get.edgelist(lm.igraph)[tmp.idx,2])
+    }
+    
+    ## NEXT STEP IS TO REVIEW THE DENSITY FORMULA WITH A CLEAR HEAD
+}
 
 
 

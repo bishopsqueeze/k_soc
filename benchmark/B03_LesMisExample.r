@@ -5,19 +5,17 @@
 ##------------------------------------------------------------------
 ## Clear the workspace
 ##------------------------------------------------------------------
-library(igraph)
-library(linkcomm)   ## contains link community functions
-library(dendextend)
+library(igraph)                 ## contains graph functions
+library(linkcomm)               ## contains link community functions
+library(dendextend)             ## contains dendrogram functions
+library(caTools)
+librart(gdata)
 
 ##------------------------------------------------------------------
 ## Clear the workspace
 ##------------------------------------------------------------------
 rm(list=ls())
 
-##------------------------------------------------------------------
-## Set the working directory
-##------------------------------------------------------------------
-setwd("/Users/alexstephens/Development/kaggle/social_circle/data/inputs")
 
 ##------------------------------------------------------------------
 ## <function> :: convert.magic
@@ -37,6 +35,140 @@ convert.magic   <- function(obj, col, type) {
     return(obj)
 }
 
+
+
+##------------------------------------------------------------------
+## Example 1: Les Miserables characters
+##
+## This example is also included in the Ahn paper on link communities
+##------------------------------------------------------------------
+
+## load the dataset
+lm <- lesmiserables
+
+##------------------------------------------------------------------
+## this is somewhat redundant, but translate the factor/edge list
+## into a egonet like what is used in the kaggle competition
+##------------------------------------------------------------------
+
+## convert the factors into character
+tmp.lm <- convert.magic(lm, c("V1","V2"), c("character","character"))
+
+## map character names to integers
+nodes_l.uniq    <- unique(tmp.lm$V1)
+nodes_r.uniq    <- unique(tmp.lm$V2)
+characters.uniq <- union(nodes_l.uniq, nodes_r.uniq)
+characters.ids  <- 1:length(characters.uniq)
+
+## define the egonet
+lm.egonet  <- list()
+
+## load the egonet
+for (i in 1:length(nodes_l.uniq)) {
+    
+    ## get a vertex & assign an id
+    tmp.node    <- nodes_l.uniq[i]
+    tmp.id      <- characters.ids[ which(characters.uniq == tmp.node)]
+    char.id     <- paste("ID_",tmp.id,sep="")
+    
+    ## get the list of characters (and their ids) associated with this vertex
+    lm.egonet[[char.id]] <- paste("ID_", characters.ids[ which(characters.uniq %in% tmp.lm$V2[which(tmp.lm$V1 == tmp.node)]) ], sep="")
+
+}
+
+
+
+
+convEgonetListToEdgeDataFrame   <- function(myEgonet)
+{
+    nodes.num   <- length(myEgonet)
+    edges.df    <- data.frame()
+    
+    ## clunky
+    for (i in 1:nodes.num) {
+        node_l      <- gsub("ID_","",names(myEgonet)[i])
+        edges       <- gsub("ID_","",myEgonet[[i]])
+        edges.df    <- rbind(edges.df, data.frame(E1=rep(node_l, length(edges)), E2=edges))
+    }
+    
+    return(graph.data.frame(edges.df, directed=FALSE))
+    
+}
+
+a <- convEgonetListToEdgeDataFrame(lm.egonet)
+
+
+calcSimilarityMatrix <- function(myIgraph)
+{
+    edges       <- get.data.frame(myIgraph, what="edges")
+    edges.num   <- nrow(edges)
+    edges.perm  <- combs(1:edges.num,2)
+    #sim         <- vector("numeric",length=nrow(edges.perm))
+    sim         <- matrix(0,nrow=edges.num, ncol=edges.num)
+    
+    for (i in 1:edges.num) {
+        for (j in 1:edges.num) {
+        
+            ## get the sample edges
+            ei  <- get.edge(myIgraph,id=i)
+            ej  <- get.edge(myIgraph,id=j)
+ 
+            ## keystone
+            keystone <- -1
+ 
+            if (ei[1] == ej[1]) {
+                keystone <- ei[1]
+                tmp.i    <- ei[2]
+                tmp.j    <- ej[2]
+            } else if (ei[1]==ej[2]) {
+                keystone <- ei[1]
+                tmp.i    <- ei[2]
+                tmp.j    <- ej[1]
+            } else if (ei[2]==ej[1]) {
+                keystone <- ei[2]
+                tmp.i    <- ei[1]
+                tmp.j    <- ej[2]
+            } else if (ei[2]==ej[2]) {
+                keystone <- ei[2]
+                tmp.i    <- ei[1]
+                tmp.j    <- ej[1]
+            }
+            
+            if (!(keystone == -1)) {
+                
+                np_i     <- c(keystone, tmp.i, neighbors(myIgraph, tmp.i))
+                np_j     <- c(keystone, tmp.j, neighbors(myIgraph, tmp.j))
+                sim[i,j] <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j)))## + 0.000001*runif(1)
+                
+            }
+        }
+    }
+    return(sim)
+}
+
+
+tmp <- graph.data.frame(rbind(  c(1,3),c(1,2),c(2,4),
+                                c(2,5),c(2,6),c(2,7),
+                                c(2,8),c(2,9),c(2,10),
+                                c(3,8),c(3,9),c(3,10),
+                                c(3,11),c(3,12)), directed=FALSE)
+
+
+tmp <- graph.data.frame(rbind(c(1,3),c(1,2),c(2,3)), directed=FALSE)
+
+b <- calcSimilarityMatrix(a)
+d <- as.dist(1-b)
+m <- hclust(d, method="single")
+
+
+
+
+
+
+##------------------------------------------------------------------
+## Set the working directory
+##------------------------------------------------------------------
+setwd("/Users/alexstephens/Development/kaggle/social_circle/data/inputs")
 
 loadLinkCommunityMatrix <- function(myId, myFriends, myEgonet)
 {
@@ -63,42 +195,6 @@ loadLinkCommunityMatrix <- function(myId, myFriends, myEgonet)
     colnames(link.mat)  <- myFriends
     rownames(link.mat)  <- myFriends
     return(as.data.frame(link.mat))
-}
-
-
-##------------------------------------------------------------------
-## Example 1: Les Miserables characters
-##
-## This example is also included in the Ahn paper on link communities
-##------------------------------------------------------------------
-
-## load the dataset
-lm <- lesmiserables
-
-## the next steps are so I can translate the characters into numeric
-## values and then attempt to reconstructe an ego network like we'd
-## see in the kaggle competition
-
-## convert the factors into character
-tmp.lm <- convert.magic(lm, c("V1","V2"), c("character","character"))
-
-## map character names to integers
-vertices.uniq   <- unique(tmp.lm$V1)
-vertices.num    <- length(vertices.uniq)
-characters.uniq <- union(unique(tmp.lm$V1), unique(tmp.lm$V2))
-characters.ids  <- 1:length(characters.uniq)
-
-## load the ego network
-lm.ego  <- list()
-for (i in 1:vertices.num) {
-    
-    ## get a vertex & assign an id
-    tmp.vertex  <- vertices.uniq[i]
-    tmp.id      <- characters.ids[ which(characters.uniq == tmp.vertex)]
-    char.id     <- paste("ID_",tmp.id,sep="")
-    
-    ## get the list of characters (and their ids) associated with this vertex
-    lm.ego[[char.id]] <- characters.ids[ which(characters.uniq %in% tmp.lm$V2[which(tmp.lm$V1 == tmp.vertex)]) ]
 }
 
 
@@ -237,9 +333,9 @@ for (i in 1:h.num) {
 ## similar data from linkcomm() ???
 lc <- getLinkCommunities(tmp.lm, hcmethod="single")
 
-lc2 <- getLinkCommunities(tmp.lm, hcmethod="single", dist=u.dist)
+lc2 <- getLinkCommunities(tmp.lm, hcmethod="single", dist=as.dist(b))
 
-
+lc3 <- getLinkCommunities(get.data.frame(a,"edges"), hcmethod="single")
 
 
 

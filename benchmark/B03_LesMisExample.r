@@ -97,74 +97,17 @@ lm.dend     <- as.dendrogram(lm.clust)
 ## Step 4:  Verify cluster output using linkcomm() [ok]
 ##------------------------------------------------------------------
 
+
 ## use linkcomm() to compute the cluster
 lm.lc       <- getLinkCommunities(get.data.frame(lm.igraph,"edges"), hcmethod="single")
 comp.clust  <- cbind(lm.lc$hclust$height, lm.clust$height, lm.lc$hclust$height-lm.clust$height)
 
 
 ##------------------------------------------------------------------
-## Step 4:  Verify cluster output using linkcomm() [ok]
+## Step 5:  Calculate the partition density
 ##------------------------------------------------------------------
 
-hh <- unique(round(lm.clust$height, digits = 5)) # Round to 5 digits to prevent numerical instability affecting community formation.
-
-## just counts the number of edges at each height
-## number of heights = 50
-## sum of countClusters = 253 = distance lenght
-countClusters <- function(x, ht)
-{
-    return(length(which(ht==x)))
-}
-clusnums <- sapply(hh, countClusters, ht = round(lm.clust$height, digits = 5)) # Number of clusters at each height.
-
-## want to find the "optimal" height using the cluster density
-
-
-
-#for (i in 1:length(unique(lm.clust$height))) {
-
-
-    tmp.height  <- unique(lm.clust$height)[20]
-    tmp.clus    <-  cutree(lm.clust, h=tmp.height)
-    
-#}
-
-
-
-## define a matrix to hold cluster membership at each height
-hgts        <- unique(lm.clust$height)
-hgts.num    <- length(hgts)
-edges.num   <- nrow(get.edgelist(lm.igraph))
-
-## define & load the matrix
-tmp.mat <- matrix(0, nrow=edges.num, ncol=hgts.num)
-for (i in 1:hgts.num) {
-    tmp.mat[,i] <- as.vector(cutree(lm.clust, h=hgts[i]))
-}
-
-## get the number of groups at each height
-groups.vec <- vector(, length=hgts.num)
-for (i in 1:hgts.num) {
-    groups.vec[i] <- length(unique(tmp.mat[,i]))
-}
-
-## loop over each height and then the groups
-
-for (i in 1:hgts.num) {
-    
-    groups.uniq <- unique(tmp.mat[,i])
-    groups.num  <- length(groups.uniq)
-
-    for (j in 1:groups.num) {
-        
-        tmp.idx     <- which(tmp.mat[,i] == groups.num[j])
-        tmp.memb    <- union(get.edgelist(lm.igraph)[tmp.idx,1], get.edgelist(lm.igraph)[tmp.idx,2])
-    }
-    
-    ## NEXT STEP IS TO REVIEW THE DENSITY FORMULA WITH A CLEAR HEAD
-}
-
-
+lm.dens <- calcPartitionDensity(lm.clust, lm.igraph)
 
 
 

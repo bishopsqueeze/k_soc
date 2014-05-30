@@ -16,6 +16,26 @@ trim <- function (x)
 }
 
 
+
+##------------------------------------------------------------------
+## <function> :: convert.magic
+##------------------------------------------------------------------
+## A function to perform a type switch on a data.frame
+##------------------------------------------------------------------
+convert.magic   <- function(obj, col, type) {
+    
+    ## isolate the columns to convert
+    idx <- which(colnames(obj) %in% col)
+    
+    ## loop over the columns and convert via a swtich()
+    for (i in 1:length(idx)) {
+        FUN <- switch(type[i], character = as.character, numeric = as.numeric, factor = as.factor, integer = as.integer)
+        obj[, idx[i]]   <- FUN(obj[, idx[i]])
+    }
+    return(obj)
+}
+
+
 ##------------------------------------------------------------------
 ## <function> :: textToCircleList
 ##------------------------------------------------------------------
@@ -27,8 +47,8 @@ trim <- function (x)
 ## representing the members of that circle.
 ##------------------------------------------------------------------
 ## Test Cases:
-## solution <- c("0, 3 1 2; 2 3; 5 4 6")
-## truth    <- c("0, 4 5; 1 2 3 4")
+## example1 <- c("0, 3 1 2; 2 3; 5 4 6")
+## example2 <- c("0, 4 5; 1 2 3 4")
 ##------------------------------------------------------------------
 textToCircleList <- function(ch)
 {
@@ -126,47 +146,56 @@ circleEdits  <- function(trueCircles, predCircles)
 
 
 
+
 ##------------------------------------------------------------------
-## <function> :: convert.magic
+## <function> :: convEgonetListToIgraphObject
 ##------------------------------------------------------------------
-## A function to perform a type switch on a data.frame
+## Take an egonet stored in list format, generally:
+##
+##  egonet.list[[ i ]]
+##      $ID_1 = {"ID_2", "ID_3", "ID_7"}
+##      $ID_10 = {"ID_12", "ID_4", ... , "ID_999"}
+##      ...
+##
+## And translate it into an iGraph object
 ##------------------------------------------------------------------
-convert.magic   <- function(obj, col, type) {
-    
-    ## isolate the columns to convert
-    idx <- which(colnames(obj) %in% col)
-    
-    ## loop over the columns and convert via a swtich()
-    for (i in 1:length(idx)) {
-        FUN <- switch(type[i], character = as.character, numeric = as.numeric, factor = as.factor, integer = as.integer)
-        obj[, idx[i]]   <- FUN(obj[, idx[i]])
-    }
-    return(obj)
-}
-
-
-
-
 convEgonetListToIgraphObject   <- function(myEgonet)
 {
+    ## NEED TO ADD CHECK FOR IGRAPH
+    
+    
     nodes.num   <- length(myEgonet)
     edges.df    <- data.frame()
     
     ## for each node in the list, strip the ID tag and load edges
     for (i in 1:nodes.num) {
-        node        <- gsub("ID_","",names(myEgonet)[i])
-        edges       <- gsub("ID_","",myEgonet[[i]])
-        edges.df    <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
+        node        <- as.integer(gsub("ID_","",names(myEgonet)[i]))
+        edges       <- as.integer(gsub("ID_","",myEgonet[[i]]))
+        if (length(edges) > 1) {
+            edges.df <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
+        } else {
+            if ( !(edges == -99999) ) {
+                edges.df <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
+            }
+        }
     }
-    
     return(graph.data.frame(edges.df, directed=FALSE))
 }
 
 
 
-
+##------------------------------------------------------------------
+## <function> :: calcSimilarityMatrix
+##------------------------------------------------------------------
+## For an undirected iGprah object, compute the Jaccard similarity
+## measure between all cominations of edges in the object
+##------------------------------------------------------------------
 calcSimilarityMatrix <- function(myIgraph)
 {
+    
+    ## NEED TO ADD CHECK FOR caTools
+    
+    
     ## load the edges and define an output matrix
     edges       <- get.data.frame(myIgraph, what="edges")
     edges.num   <- nrow(edges)
@@ -175,8 +204,6 @@ calcSimilarityMatrix <- function(myIgraph)
     sim.mat     <- matrix(1,nrow=edges.num, ncol=edges.num)
     
     ## compute the similarity matrix
-    #for (i in 1:edges.num) {
-        #for (j in 1:edges.num) {
     for (i in 1:nrow(edges.perm)) {
         
             ## get the edges to compare
@@ -209,21 +236,26 @@ calcSimilarityMatrix <- function(myIgraph)
             if (!(keystone == -1)) {
                 np_i     <- c(keystone, tmp.i, neighbors(myIgraph, tmp.i))
                 np_j     <- c(keystone, tmp.j, neighbors(myIgraph, tmp.j))
-                #sim[i,j] <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
                 sim.vec[i] <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
             }
-            #}
     }
     sim.mat[lower.tri(sim.mat)] <- sim.vec
     colnames(sim.mat) <- paste("edge_",1:edges.num,sep="")
     rownames(sim.mat) <- paste("edge_",1:edges.num,sep="")
+    
+    ## return the *similarity* matrix (and not the distance)
     return(sim.mat)
 }
 
 
 
-
-
+##------------------------------------------------------------------
+## <function> :: calcPartitionDensity
+##------------------------------------------------------------------
+## For a given hclust object and an iGraphs set of edges, compute
+## the partition density for that "community of links"
+## based on the cluster
+##------------------------------------------------------------------
 calcPartitionDensity    <- function(myHclust, myIgraph)
 {
     h.vec       <- unique(myHclust$height)
@@ -268,11 +300,12 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     pdmax   <- max(dens.vec)
     hmax    <- h.vec[dens.vec == pdmax]
     
-    ## isolate cluster members
+    ## isolate cluster members at the maximum density
     clust.ids   <- cutree(myHclust, h=hmax)
     clust.uniq  <- unique(clust.ids)
     clust.num   <- length(clust.uniq)
     clust.edges <- list()
+    clust.nodes <- list()
     
     ## identify the index of the edges that are clusters
     clust.cnt   <- 1
@@ -283,18 +316,26 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
         
         if ( length(tmp.idx) >= 3 ) {
             clust.edges[[clust.cnt]] <- tmp.idx
+            clust.nodes[[clust.cnt]] <- as.integer(tmp.memb)
             clust.cnt   <- clust.cnt + 1
         }
         
     }
-    return(list(pdens=pdens, pdmax=pdmax, hmax=hmax, clust.ids=clust.ids, cluster.edges=clust.list))
+    return(list(pdens=pdens, pdmax=pdmax, hmax=hmax, clust.nodes=clust.nodes, cluster.edges=clust.edges))
 }
 
 
 
 
 
+##------------------------------------------------------------------
+## <function> :: circleBalancedErrorRate
+##------------------------------------------------------------------
 ##
+## under construction
+##
+## a commonly used metric of community prediction in this area
+##------------------------------------------------------------------
 circleBalancedErrorRate <- function(trueCircle, predCircle)
 {
     ## error check

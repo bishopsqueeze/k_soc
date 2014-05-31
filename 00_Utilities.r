@@ -216,12 +216,15 @@ calcSimilarityMatrix <- function(myIgraph, DOPARALLEL=FALSE)
     edges.ch    <- convert.magic(edges, c("from","to"), c("character","character"))
     edges.num   <- ecount(myIgraph)
     
-    ## do a neighbor lookup once on all vertices
+    ## create a list of neighbors
     verts       <- V(myIgraph)$name
     np.list    <- list()
     for (i in 1:length(verts)) {
         np.list[[verts[i]]]    <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
     }
+    
+    ## create a list of edges
+    edges.list  <- sapply(1:edges.num, function(x){list(as.character(edges[x,]))})
     
     ## define the output matrix (this is the memory concern)
     sim.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
@@ -229,8 +232,8 @@ calcSimilarityMatrix <- function(myIgraph, DOPARALLEL=FALSE)
     colnames(sim.mat)   <- edges$to
     
     ## define the set of iterators for the parallel loop
-    ivec    <- 1:edges.num
-    jvec    <- 1:edges.num
+    #ivec    <- 1:edges.num
+    #jvec    <- 1:edges.num
     
     ## compute the matrix elements for each iteration
     if (DOPARALLEL) {
@@ -242,14 +245,38 @@ calcSimilarityMatrix <- function(myIgraph, DOPARALLEL=FALSE)
     } else {
         cat("calcSimilarityMatrix::non-parallel\n")
         for (i in 1:(edges.num-1)) {
-            for (j in (i+1):edges.num) {
-                sim.mat[j,i] <- calcSimEikEjk(edges, np.list, i, j)
-            }
+            
+            
+            ## two vectors to pass -- serve as matrices
+            jvec <- (i+1):edges.num
+            #ivec <- rep(i, length(jvec))
+            
+            
+            sim.mat[jvec,i] <- sapply(jvec, function(x) {
+                ifelse ( (intersectLength(edges.list[[i]], edges.list[[x]]) > 0),
+                    getSimEikEjk(edges.list[[i]], edges.list[[x]], np.list),
+                    0 )
+            })
+            
+                #for (j in (i+1):edges.num) {
+                #sim.mat[j,i] <- calcSimEikEjk(edges, np.list, i, j)
+                #}
         }
     }
     
     ## return the *similarity* matrix (and not the distance)
     return(sim.mat)
+}
+
+
+intersectLength <- function(edge1,edge2) { length(intersect(edge1,edge2)) }
+
+getSimEikEjk <- function(edge1, edge2, myNeighbors)
+{
+        edge.intersect  <- intersect(edge1,edge2)
+        np_i            <- myNeighbors[[setdiff(edge1,edge.intersect)]]
+        np_j            <- myNeighbors[[setdiff(edge2,edge.intersect)]]
+        SimEikEjk       <- length(intersect(np_i, np_j)) / length(union(np_i, np_j))
 }
 
 

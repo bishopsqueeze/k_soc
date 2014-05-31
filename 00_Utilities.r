@@ -35,27 +35,6 @@ convert.magic   <- function(obj, col, type) {
 }
 
 
-
-## under construction
-convClustersToTextCircle <- function(myId, myCluster)
-{
-    clust.num   <- length(myCluster)
-    circ.str    <- paste(myId,",",sep="")
-    
-    for (i in 1:clust.num) {
-        tmp.nodes   <- myCluster[[i]]
-        
-        if (i < clust.num) {
-            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),"; ",sep="")
-        } else {
-            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),sep="")
-        }
-    }
-    return(circ.str)
-    
-}
-
-
 ##------------------------------------------------------------------
 ## <function> :: dedupEdgeList
 ##------------------------------------------------------------------
@@ -75,7 +54,6 @@ dedupEdgeList <- function(myIgraph) {
     
     return(graph.data.frame(output.df, directed=FALSE))
 }
-
 
 
 ##------------------------------------------------------------------
@@ -187,8 +165,6 @@ circleEdits  <- function(trueCircles, predCircles)
 }
 
 
-
-
 ##------------------------------------------------------------------
 ## <function> :: convEgonetListToIgraphObject
 ##------------------------------------------------------------------
@@ -224,7 +200,6 @@ convEgonetListToIgraphObject   <- function(myEgonet)
     }
     return(graph.data.frame(edges.df, directed=FALSE))
 }
-
 
 
 ##------------------------------------------------------------------
@@ -440,6 +415,26 @@ circleBalancedErrorRate <- function(trueCircle, predCircle)
 ## p2   <- list(p1=c(1), p2=c(2), p3=c(3), p4=c(4), p5=c(5))    ## each in a circle (7 edits)
 
 
+
+
+## under construction
+convClustersToTextCircle <- function(myId, myCluster)
+{
+    clust.num   <- length(myCluster)
+    circ.str    <- paste(myId,",",sep="")
+    
+    for (i in 1:clust.num) {
+        tmp.nodes   <- myCluster[[i]]
+        
+        if (i < clust.num) {
+            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),"; ",sep="")
+        } else {
+            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),sep="")
+        }
+    }
+    return(circ.str)
+    
+}
 
 
 

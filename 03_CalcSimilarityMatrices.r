@@ -83,7 +83,9 @@ for (i in 1:ego.num) {
 }
 
 
+##------------------------------------------------------------------
 ## double check the results for the test case (i==40)
+##------------------------------------------------------------------
 ##tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[["ID_25283"]]), hcmethod="single", plot=FALSE, verbose=FALSE)
 ##tmp.d  <- as.dist(1-tmp.s)
 ##tmp.h  <- hclust(tmp.d, method="single")

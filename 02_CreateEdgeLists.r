@@ -66,6 +66,6 @@ for (i in 1:ego.num) {
 ##------------------------------------------------------------------
 ## Save results
 ##------------------------------------------------------------------
-save(egoedges.list, "02_SocialCircle_Edges.Rdata")
+save(egoedges.list, file="02_SocialCircle_Edges.Rdata")
 
 

@@ -233,62 +233,99 @@ convEgonetListToIgraphObject   <- function(myEgonet)
 ## For an undirected iGprah object, compute the Jaccard similarity
 ## measure between all cominations of edges in the object
 ##------------------------------------------------------------------
-calcSimilarityMatrix <- function(myIgraph)
+calcSimilarityMatrix <- function(myIgraph, DOPARALLEL=FALSE)
 {
-    
-    ## NEED TO ADD CHECK FOR caTools
-    
     
     ## load the edges and define an output matrix
     edges       <- get.data.frame(myIgraph, what="edges")
-    edges.num   <- nrow(edges)
-    edges.perm  <- combs(1:edges.num, 2)
-    sim.vec     <- vector(,length=nrow(edges.perm))
-    sim.mat     <- matrix(1,nrow=edges.num, ncol=edges.num)
+    edges.ch    <- convert.magic(edges, c("from","to"), c("character","character"))
+    edges.num   <- ecount(myIgraph)
     
-    ## compute the similarity matrix
-    for (i in 1:nrow(edges.perm)) {
-        
-            ## get the edges to compare
-            ei  <- get.edge(myIgraph,id=edges.perm[i,1])
-            ej  <- get.edge(myIgraph,id=edges.perm[i,2])
-            
-            ## define a dummy keystone
-            keystone <- -1
-            
-            ## cases where there is a keystone
-            if (ei[1] == ej[1]) {
-                keystone <- ei[1]
-                tmp.i    <- ei[2]
-                tmp.j    <- ej[2]
-            } else if (ei[1]==ej[2]) {
-                keystone <- ei[1]
-                tmp.i    <- ei[2]
-                tmp.j    <- ej[1]
-            } else if (ei[2]==ej[1]) {
-                keystone <- ei[2]
-                tmp.i    <- ei[1]
-                tmp.j    <- ej[2]
-            } else if (ei[2]==ej[2]) {
-                keystone <- ei[2]
-                tmp.i    <- ei[1]
-                tmp.j    <- ej[1]
-            }
-            
-            ## if there is a keystone, then compute the Jaccard coefficient
-            if (!(keystone == -1)) {
-                np_i     <- c(keystone, tmp.i, neighbors(myIgraph, tmp.i))
-                np_j     <- c(keystone, tmp.j, neighbors(myIgraph, tmp.j))
-                sim.vec[i] <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
-            }
+    ## do a neighbor lookup once on all vertices
+    verts       <- V(myIgraph)$name
+    np.list    <- list()
+    for (i in 1:length(verts)) {
+        np.list[[verts[i]]]    <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
     }
-    sim.mat[lower.tri(sim.mat)] <- sim.vec
-    colnames(sim.mat) <- paste("edge_",1:edges.num,sep="")
-    rownames(sim.mat) <- paste("edge_",1:edges.num,sep="")
+    
+    ## define the output matrix (this is the memory concern)
+    sim.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
+    rownames(sim.mat)   <- edges$from
+    colnames(sim.mat)   <- edges$to
+    
+    ## define the set of iterators for the parallel loop
+    ivec    <- 1:edges.num
+    jvec    <- 1:edges.num
+    
+    ## compute the matrix elements for each iteration
+    if (DOPARALLEL) {
+        cat("calcSimilarityMatrix::parallel\n")
+        sim.mat <- foreach(i=ivec, .combine='cbind') %:%
+            foreach(j=jvec, .combine='c') %dopar% {
+                calcSimEikEjk(edges, np.list, i, j)
+            }
+    } else {
+        cat("calcSimilarityMatrix::non-parallel\n")
+        for (i in 1:(edges.num-1)) {
+            for (j in (i+1):edges.num) {
+                sim.mat[j,i] <- calcSimEikEjk(edges, np.list, i, j)
+            }
+        }
+    }
     
     ## return the *similarity* matrix (and not the distance)
     return(sim.mat)
 }
+
+
+##------------------------------------------------------------------
+## <function> :: calcSimilarityMatrix
+##------------------------------------------------------------------
+## Compute the (i,j)th element of a similarity matrix, given a pair
+## of edges and the neighbors for each node in the edges
+##------------------------------------------------------------------
+calcSimEikEjk <- function(myEdges, myNeighbors, i, j)
+{
+    ## get the edges to compare
+    ei  <- myEdges[i,]
+    ej  <- myEdges[j,]
+    
+    ## define a dummy keystone
+    keystone <- -1
+    
+    ## cases where there is a keystone
+    if (ei[1,1] == ej[1,1]) {
+        keystone <- ei[1,1]
+        tmp.i    <- ei[1,2]
+        tmp.j    <- ej[1,2]
+    } else if (ei[1,1]==ej[1,2]) {
+        keystone <- ei[1,1]
+        tmp.i    <- ei[1,2]
+        tmp.j    <- ej[1,1]
+    } else if (ei[1,2]==ej[1,1]) {
+        keystone <- ei[1,2]
+        tmp.i    <- ei[1,1]
+        tmp.j    <- ej[1,2]
+    } else if (ei[1,2]==ej[1,2]) {
+        keystone <- ei[1,2]
+        tmp.i    <- ei[1,1]
+        tmp.j    <- ej[1,1]
+    }
+    
+    ## if there is a keystone, then compute the Jaccard coefficient
+    if (!(keystone == -1)) {
+        np_i      <- myNeighbors[[tmp.i]]
+        np_j      <- myNeighbors[[tmp.j]]
+        SimEikEjk <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
+    } else {
+        SimEikEjk <- 0
+    }
+    
+    ## return the (i,j)th element of the matrix
+    return(SimEikEjk)
+}
+
+
 
 
 

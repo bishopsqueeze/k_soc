@@ -61,7 +61,7 @@ egoedges.order  <- order(egoedges.count)
 output.dir  <- paste(getwd(),"sim",sep="/")
 
 ## loop over each egonet and compute the similarity matrices
-for (i in 1:ego.num) {
+for (i in 40:40) {
     
     ## set-up
     tmp.id          <- ego.names[egoedges.order[i]]
@@ -78,8 +78,8 @@ for (i in 1:ego.num) {
     tmp.s  <- calcSimilarityMatrix(tmp.edges, DOPARALLEL=DOPARALLEL)
 
     ## write intermediate results to a file
-    #write(tmp.s, file=tmp.csvName)
-    #write(tmp.s, file=tmp.rdataName)
+    write(tmp.s, file=tmp.csvName)
+    write(tmp.s, file=tmp.rdataName)
 }
 
 

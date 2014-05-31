@@ -37,6 +37,27 @@ convert.magic   <- function(obj, col, type) {
 
 
 ##------------------------------------------------------------------
+## <function> :: dedupEdgeList
+##------------------------------------------------------------------
+## A function to remove duplicates from an iGraph object
+##------------------------------------------------------------------
+dedupEdgeList <- function(myIgraph) {
+    
+    ## translate igraph object into a data frame
+    edge.df     <- get.data.frame(myIgraph)
+    
+    ## contact edge members and then return the unique set
+    edges.all   <- paste(edge.df$from, edge.df$to, sep="_")
+    edges.uniq  <- unique(edges.all)
+    
+    return(graph.data.frame( as.data.frame(do.call("rbind",(strsplit(edges.uniq,"_")))) , directed=FALSE))
+}
+
+
+
+
+
+##------------------------------------------------------------------
 ## <function> :: textToCircleList
 ##------------------------------------------------------------------
 ## Take a line in the format of a set of social circles tied to a user
@@ -61,7 +82,7 @@ textToCircleList <- function(ch)
     
     ## split the userid from the circles
     tmp.split   <- strsplit(ch, ",")[[1]]
-    tmp.id      <- paste("ID_", trim(tmp.split)[1])
+    tmp.id      <- paste("ID_", trim(tmp.split)[1], sep="")
     tmp.circles <- trim(strsplit(tmp.split[2],";")[[1]])
     
     ## load and name the circles into a list
@@ -70,7 +91,7 @@ textToCircleList <- function(ch)
                             {
                                             as.integer( unlist(strsplit(x," ")[[1]]) )
                             })
-    names(tmp.list) <- paste("circle", 1:legnth(tmp.list),sep="")
+    names(tmp.list) <- paste("circle", 1:length(tmp.list),sep="")
     
     ## return a list
     return(list(ego=tmp.id, res=tmp.list))

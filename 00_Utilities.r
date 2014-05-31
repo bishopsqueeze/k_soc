@@ -16,7 +16,6 @@ trim <- function (x)
 }
 
 
-
 ##------------------------------------------------------------------
 ## <function> :: convert.magic
 ##------------------------------------------------------------------
@@ -33,6 +32,27 @@ convert.magic   <- function(obj, col, type) {
         obj[, idx[i]]   <- FUN(obj[, idx[i]])
     }
     return(obj)
+}
+
+
+
+## under construction
+convClustersToTextCircle <- function(myId, myCluster)
+{
+    clust.num   <- length(myCluster)
+    circ.str    <- paste(myId,",",sep="")
+    
+    for (i in 1:clust.num) {
+        tmp.nodes   <- myCluster[[i]]
+        
+        if (i < clust.num) {
+            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),"; ",sep="")
+        } else {
+            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),sep="")
+        }
+    }
+    return(circ.str)
+    
 }
 
 

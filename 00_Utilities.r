@@ -70,10 +70,11 @@ dedupEdgeList <- function(myIgraph) {
     edges.all   <- paste(edge.df$from, edge.df$to, sep="_")
     edges.uniq  <- unique(edges.all)
     
-    return(graph.data.frame( as.data.frame(do.call("rbind",(strsplit(edges.uniq,"_")))) , directed=FALSE))
+    ## translate back into a data.frame
+    output.df   <- as.data.frame(do.call("rbind",(strsplit(edges.uniq,"_"))))
+    
+    return(graph.data.frame(output.df, directed=FALSE))
 }
-
-
 
 
 
@@ -215,6 +216,7 @@ convEgonetListToIgraphObject   <- function(myEgonet)
         if (length(edges) > 1) {
             edges.df <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
         } else {
+            ## here we ignore friends with no friends
             if ( !(edges == -99999) ) {
                 edges.df <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
             }

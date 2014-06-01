@@ -270,7 +270,6 @@ calcSimilarityMatrix <- function(myIgraph)
 ##------------------------------------------------------------------
 ## <function> :: calcProfileSimilarityMatrix
 ##------------------------------------------------------------------
-
 ## should be similar to calcSimilarity matrrix, but the initial
 ## difference would be that if jidx > 0, then you'd need to
 ## compute the cosine of the two feature vectors istead of the
@@ -279,6 +278,64 @@ calcSimilarityMatrix <- function(myIgraph)
 ## Cosine similarity
 ## http://www.gettingcirrius.com/2010/12/calculating-similarity-part-1-cosine.html
 ## cosine(A,B) = A %*% B / (SQRT(A %*% A) * SQRT( B %*% B))
+##------------------------------------------------------------------
+calcProfileSimilarityMatrix <- function(myIgraph)
+{
+    
+    ## load the edges and define an output matrix
+    edges       <- get.data.frame(myIgraph, what="edges")
+    edges.num   <- ecount(myIgraph)
+    
+    ## create a list of neighbors for each vertex in the graph
+    verts       <- V(myIgraph)$name
+    np.list     <- list()
+    for (i in 1:length(verts)) {
+        np.list[[verts[i]]] <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
+    }
+    
+    ## create a list of edges
+    edges.list  <- sapply(1:edges.num, function(x){list(as.character(edges[x,]))})
+    
+    ## define the output matrix
+    prof.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
+    rownames(prof.mat)   <- paste0("edge",1:edges.num)
+    colnames(prof.mat)   <- paste0("edge",1:edges.num)
+    
+    ##-------------------------------------------------------------
+    ## populate the lower triangular matrix with similarity coefficients
+    ##-------------------------------------------------------------
+    cat("calcSimilarityMatrix::non-parallel\n")
+    for (i in 1:(edges.num-1)) {
+        
+        ## try to vectorize as much as possible
+        jvec    <- (i+1):edges.num
+        ej      <- edges[jvec,]
+        ei      <- unlist(edges.list[i])
+        
+        ## boolean to locate any pairwise match amongst edges
+        jidx <- (ei[1] == ej[,1]) | (ei[2] == ej[,1]) | (ei[1] == ej[,2]) | (ei[2] == ej[,2])
+        
+        ## if there's a match (i.e., jidx > 0), then loop over the
+        ## subset of rows that match & calc the Jaccard coefficient
+        if (sum(jidx) > 0) {
+            tidx <- jvec[jidx]
+            
+            #sim.mat[jvec[jidx],i] <- sapply(tidx,
+            #function(x) {
+            #    np_i  <- np.list[[ setdiff(ei, intersect(ei, as.character(edges[x,])   )) ]]
+            #    np_j  <- np.list[[ setdiff(as.character(edges[x,]), intersect(ei, as.character(edges[x,]))) ]]
+            #    return( length(intersect(np_i, np_j)) / length(union(np_i, np_j)) )
+            #})
+        }
+        
+        ## report progress
+        if ( (i %% 1000) == 0 ) { cat("Iteration",i,"of",edges.num,"\n") }
+    }
+    
+    ## return the *similarity* matrix
+    return(prof.mat)
+}
+
 
 
 
@@ -380,11 +437,14 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     return(list(pdens=pdens, pdmax=pdmax, hmax=hmax))
 }
 
-
+##------------------------------------------------------------------
+## <function> :: extractHclustClusters
+##------------------------------------------------------------------
+## Isolate cluster members from a tree clipped at a given height
+##------------------------------------------------------------------
 extractHclustClusters <- function(myHclust, myHmax, myIgraph)
 {
-
-    ## isolate cluster members at the maximum density
+    
     clust.ids   <- cutree(myHclust, h=myHmax)
     clust.uniq  <- unique(clust.ids)
     clust.num   <- length(clust.uniq)
@@ -412,6 +472,52 @@ extractHclustClusters <- function(myHclust, myHmax, myIgraph)
    return(list(cl.edges=final.clust.edges, cl.nodes=final.clust.nodes, cl.count=clust.cnt-1))
 }
 
+
+
+##------------------------------------------------------------------
+## <function> :: unionEgonetLeaves
+##------------------------------------------------------------------
+## Given an egonet tied to a user, create the union of all possible
+## profile leaves associated with all vertices.
+##------------------------------------------------------------------
+unionEgonetLeaves   <- function(myId, myIgraph, myLeaves)
+{
+    ## get ids for the user and all of the vertices in the egonet
+    vertices.ids    <- c(myId, paste0("ID_", V(myIgraph)$name))
+    
+    ## return the sorted list of all possible leaves
+    return( sort(unique(unlist(sapply(vertices.ids, function(x){myLeaves[[x]]} )))) )
+}
+
+
+
+##------------------------------------------------------------------
+## <function> :: unionEgonetLeaves
+##------------------------------------------------------------------
+loadLeafMatrix   <- function(myId, myIgraph, myLeaves, myUnion)
+{
+    vertices.ids    <- c(myId, paste0("ID_", V(myIgraph)$name))
+    vertices.num    <- length(vertices.ids)
+    union.num       <- length(myUnion)
+    
+    ## define a placeholder matrix;
+    ##  nrow    = # leaves in the union
+    ##  ncol    = # vertices
+    leaf.mat        <- matrix(0,nrow=union.num, ncol=vertices.num)
+    
+    ## loop over all vertices and find matches
+    for (i in 1:vertices.num) {
+        tmp.id                  <- vertices.ids[i]
+        tmp.leaf                <- myLeaves[[tmp.id]]
+        tmp.index               <- which(myUnion %in% tmp.leaf)
+        leaf.mat[tmp.index,i]   <- 1
+    }
+    leaf.df             <- as.data.frame(leaf.mat)
+    colnames(leaf.df)   <- vertices.ids
+    rownames(leaf.df)   <- myUnion
+
+    return(leaf.df)
+}
 
 
 

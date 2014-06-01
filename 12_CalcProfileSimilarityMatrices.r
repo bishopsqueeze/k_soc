@@ -61,29 +61,42 @@ egoedges.order  <- order(egoedges.count)
 output.dir  <- paste(getwd(),"sim",sep="/")
 
 ## loop over each egonet and compute the similarity matrices
-for (i in 109:1) {
+for (i in 1:109) {
     
     ## set-up
     tmp.id          <- ego.names[egoedges.order[i]]
     tmp.edges       <- egoedges.list[[tmp.id]]
     
     ## echo progress
-    cat("Iteration", i, "of", ego.num, " :: Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
+    cat("Iteration", i, "of", ego.num, " :: Profile Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
+    
+    ## load the profile matrix
+    tmp.profFile    <- paste0(getwd(),"/prof/",paste0(tmp.id,".ProfileMatrix.Rdata"))
+    load(tmp.profFile)
     
     ## output files
-    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".SimilarityMatrix.Rdata"), sep="/")
+    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".ProfileSimilarityMatrix.Rdata"), sep="/")
     
     ## compute the matrices
-    tmp.sim  <- calcSimilarityMatrix(tmp.edges)
+    tmp.profSim  <- calcProfileSimilarityMatrix(tmp.edges, tmp.leafMatrix)
 
     ## write intermediate results to a file
-<<<<<<< HEAD
-    write(tmp.s, file=tmp.csvName)
-    write(tmp.s, file=tmp.rdataName)
-=======
-    save(tmp.sim, file=tmp.rdataName)
->>>>>>> FETCH_HEAD
+    save(tmp.profSim, file=tmp.rdataName)
+
 }
+
+
+
+
+
+
+## --- debug ---
+myIgraph <- tmp.edges
+myLeafMatrix <- tmp.leafMatrix
+
+## load the profile matrix
+tmp.simFile    <- paste0(getwd(),"/sim/",paste0(tmp.id,".SimilarityMatrix.Rdata"))
+load(tmp.simFile)
 
 
 ##------------------------------------------------------------------

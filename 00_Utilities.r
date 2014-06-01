@@ -15,6 +15,16 @@ trim <- function (x)
     return(gsub("^\\s+|\\s+$", "", x))
 }
 
+##------------------------------------------------------------------
+## <function> :: calcCosineSimilarity
+##------------------------------------------------------------------
+## Cosine similarity between two vectors
+##------------------------------------------------------------------
+calcCosineSimilarity  <- function(aVec, bVec)
+{
+    return((aVec %*% bVec) / (sqrt(aVec %*% aVec) * sqrt(bVec %*% bVec)))
+}
+
 
 ##------------------------------------------------------------------
 ## <function> :: convert.magic
@@ -113,6 +123,11 @@ textToCircleList <- function(ch)
 ## Test Cases:
 ## s <- list(s1=c(3,1,2), s2=c(2,3), s3=c(5,4,6))
 ## t <- list(t1=c(4,5), t2=c(1,2,3,4))
+##------------------------------------------------------------------
+## test cases for a given set of circles
+## t    <- list(t1=c(4,5), t2=c(1,2,3,4), t3=c(2,3))            ## truth
+## p1   <- list(p1=c(1,2,3,4,5))                                ## all in one circle (5 edits)
+## p2   <- list(p1=c(1), p2=c(2), p3=c(3), p4=c(4), p5=c(5))    ## each in a circle (7 edits)
 ##------------------------------------------------------------------
 circleEdits  <- function(trueCircles, predCircles)
 {
@@ -279,7 +294,7 @@ calcSimilarityMatrix <- function(myIgraph)
 ## http://www.gettingcirrius.com/2010/12/calculating-similarity-part-1-cosine.html
 ## cosine(A,B) = A %*% B / (SQRT(A %*% A) * SQRT( B %*% B))
 ##------------------------------------------------------------------
-calcProfileSimilarityMatrix <- function(myIgraph)
+calcProfileSimilarityMatrix <- function(myIgraph, myLeafMatrix)
 {
     
     ## load the edges and define an output matrix
@@ -320,12 +335,11 @@ calcProfileSimilarityMatrix <- function(myIgraph)
         if (sum(jidx) > 0) {
             tidx <- jvec[jidx]
             
-            #sim.mat[jvec[jidx],i] <- sapply(tidx,
-            #function(x) {
-            #    np_i  <- np.list[[ setdiff(ei, intersect(ei, as.character(edges[x,])   )) ]]
-            #    np_j  <- np.list[[ setdiff(as.character(edges[x,]), intersect(ei, as.character(edges[x,]))) ]]
-            #    return( length(intersect(np_i, np_j)) / length(union(np_i, np_j)) )
-            #})
+            prof.mat[jvec[jidx],i] <- sapply(tidx,
+            function(x) {
+                ij_id  <- paste0("ID_",setdiff(union(ei, as.character(edges[x,])),intersect(ei, as.character(edges[x,]))))
+                 return( calcCosineSimilarity( myLeafMatrix[, ij_id[1]], myLeafMatrix[, ij_id[2]] ) )
+            })
         }
         
         ## report progress
@@ -335,6 +349,7 @@ calcProfileSimilarityMatrix <- function(myIgraph)
     ## return the *similarity* matrix
     return(prof.mat)
 }
+
 
 
 
@@ -437,6 +452,7 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     return(list(pdens=pdens, pdmax=pdmax, hmax=hmax))
 }
 
+
 ##------------------------------------------------------------------
 ## <function> :: extractHclustClusters
 ##------------------------------------------------------------------
@@ -478,7 +494,7 @@ extractHclustClusters <- function(myHclust, myHmax, myIgraph)
 ## <function> :: unionEgonetLeaves
 ##------------------------------------------------------------------
 ## Given an egonet tied to a user, create the union of all possible
-## profile leaves associated with all vertices.
+## profile leaves associated with all vertices in that egonet
 ##------------------------------------------------------------------
 unionEgonetLeaves   <- function(myId, myIgraph, myLeaves)
 {
@@ -490,9 +506,13 @@ unionEgonetLeaves   <- function(myId, myIgraph, myLeaves)
 }
 
 
-
 ##------------------------------------------------------------------
-## <function> :: unionEgonetLeaves
+## <function> :: loadLeafMatrix
+##------------------------------------------------------------------
+## Create a matrix that holds a binary vector for each set of
+## profile leaves in the union of all leaf profiles tied to an
+## egonet.  The columns include all vertices in the egonet as
+## well as the profile for the ego.
 ##------------------------------------------------------------------
 loadLeafMatrix   <- function(myId, myIgraph, myLeaves, myUnion)
 {
@@ -521,30 +541,6 @@ loadLeafMatrix   <- function(myId, myIgraph, myLeaves, myUnion)
 
 
 
-
-
-## identify the index of the edges that are clusters
-
-clust.cnt   <- 1
-#for (i in 1:clust.num) {
-#    tmp.clust   <- clust.uniq[i]
-#    tmp.idx     <- e.idx[which(clust.ids == tmp.clust)]
-#    tmp.memb    <- union(get.edgelist(myIgraph)[tmp.idx,1], get.edgelist(myIgraph)[tmp.idx,2])
-#
-#    if ( length(tmp.idx) >= 3 ) {
-#        clust.edges[[clust.cnt]] <- tmp.idx
-#        clust.nodes[[clust.cnt]] <- as.integer(tmp.memb)
-#        clust.cnt   <- clust.cnt + 1
-#    }
-#
-#}
-
-
-
-
-
-
-
 ##------------------------------------------------------------------
 ## <function> :: circleBalancedErrorRate
 ##------------------------------------------------------------------
@@ -570,11 +566,6 @@ circleBalancedErrorRate <- function(trueCircle, predCircle)
     #0.5*( length(setdiff(true, pred))/length(true) + length(setdiff(pred, true))/length(pred) )
     
 }
-
-## test cases for a given set of circles
-## t    <- list(t1=c(4,5), t2=c(1,2,3,4), t3=c(2,3))            ## truth
-## p1   <- list(p1=c(1,2,3,4,5))                                ## all in one circle (5 edits)
-## p2   <- list(p1=c(1), p2=c(2), p3=c(3), p4=c(4), p5=c(5))    ## each in a circle (7 edits)
 
 
 

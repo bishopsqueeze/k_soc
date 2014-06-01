@@ -98,7 +98,6 @@ if (DO_CHECKS) {
         ##------------------------------------------------------------------
         tmp.lc <- getLinkCommunities(get.data.frame(tmp.edges), hcmethod="single", plot=FALSE, verbose=FALSE)
         
-        
         ## Compare computed heights (note that linkcomm() rounds to 5 digits
         my.h    <- tmp.hclust$height
         lc.h    <- tmp.lc$hclust$height

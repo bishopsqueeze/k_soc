@@ -130,3 +130,9 @@ colnames(circleSummary) <- c("num_circles","avg_cirlce_pop")
 
 
 
+
+##------------------------------------------------------------------
+## Test 4:  Review the number of members in a circle and the
+## fraction of the total vertex population that lands in a circle
+##------------------------------------------------------------------
+

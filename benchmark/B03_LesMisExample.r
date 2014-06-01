@@ -71,20 +71,17 @@ for (i in 1:length(nodes_l.uniq)) {
 ##------------------------------------------------------------------
 lm.igraph   <- convEgonetListToIgraphObject(lm.egonet)
 
-
 ##------------------------------------------------------------------
 ## Step 3:  Compute the dissimilarity measure amongst the clusters.
 ## The similarity measure is the Jaccard coefficient. The Jaccard
 ## *distance* is 1 minus the Jaccard coefficient.
 ##------------------------------------------------------------------
-
 lm.sim      <- calcSimilarityMatrix(lm.igraph)  ## similarity matrix
 lm.dis      <- 1 - lm.sim                       ## jaccard distance
 
 ##------------------------------------------------------------------
 ## Step 3:  Compute the cluster
 ##------------------------------------------------------------------
-
 ## create a distance object from the dissimilarity matrix
 lm.dist     <- as.dist(lm.dis)
 
@@ -92,12 +89,9 @@ lm.dist     <- as.dist(lm.dis)
 lm.clust    <- hclust(lm.dist, method="single")
 lm.dend     <- as.dendrogram(lm.clust)
 
-
 ##------------------------------------------------------------------
 ## Step 4:  Verify cluster output using linkcomm() [ok]
 ##------------------------------------------------------------------
-
-
 ## use linkcomm() to compute the cluster
 lm.lc       <- getLinkCommunities(get.data.frame(lm.igraph,"edges"), hcmethod="single")
 comp.clust  <- cbind(lm.lc$hclust$height, lm.clust$height, lm.lc$hclust$height-lm.clust$height)
@@ -106,7 +100,6 @@ comp.clust  <- cbind(lm.lc$hclust$height, lm.clust$height, lm.lc$hclust$height-l
 ##------------------------------------------------------------------
 ## Step 5:  Calculate the partition density
 ##------------------------------------------------------------------
-
 lm.dens <- calcPartitionDensity(lm.clust, lm.igraph)
 
 

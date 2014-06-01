@@ -337,10 +337,10 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
 {
     h.vec       <- unique(myHclust$height)
     h.num       <- length(h.vec)
-    e.num       <- nrow(get.edgelist(myIgraph))
+    e.num       <- ecount(myIgraph)
     e.idx       <- 1:e.num
     
-    ## matrix to hold the identify of group members at each height
+    ## vector to hold the identify of group members at each height
     clust.vec   <- vector(, length=h.num)
     dens.vec    <- vector(, length=h.num)
     
@@ -375,31 +375,68 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     ## idenitfy the maximum density & corresponding height
     pdens   <- data.frame(h=h.vec, den=dens.vec)
     pdmax   <- max(dens.vec)
-    hmax    <- h.vec[dens.vec == pdmax]
+    hmax    <- min(h.vec[dens.vec == pdmax])    ## extra max wrapper when there are pdens ties
     
+    return(list(pdens=pdens, pdmax=pdmax, hmax=hmax))
+}
+
+
+extractHclustClusters <- function(myHclust, myHmax, myIgraph)
+{
+
     ## isolate cluster members at the maximum density
-    clust.ids   <- cutree(myHclust, h=hmax)
+    clust.ids   <- cutree(myHclust, h=myHmax)
     clust.uniq  <- unique(clust.ids)
     clust.num   <- length(clust.uniq)
+
+    e.num       <- ecount(myIgraph)
+    e.idx       <- 1:e.num
+
     clust.edges <- list()
     clust.nodes <- list()
     
-    ## identify the index of the edges that are clusters
-    clust.cnt   <- 1
     for (i in 1:clust.num) {
-        tmp.clust   <- clust.uniq[i]
-        tmp.idx     <- e.idx[which(clust.ids == tmp.clust)]
-        tmp.memb    <- union(get.edgelist(myIgraph)[tmp.idx,1], get.edgelist(myIgraph)[tmp.idx,2])
-        
-        if ( length(tmp.idx) >= 3 ) {
-            clust.edges[[clust.cnt]] <- tmp.idx
-            clust.nodes[[clust.cnt]] <- as.integer(tmp.memb)
-            clust.cnt   <- clust.cnt + 1
-        }
-        
+       
+       tmp.clust   <- clust.uniq[i]
+       tmp.idx     <- e.idx[(clust.ids == tmp.clust)]
+       tmp.memb    <- union(get.edgelist(myIgraph)[tmp.idx,1], get.edgelist(myIgraph)[tmp.idx,2])
+
+       clust.edges[[i]] <- tmp.idx
+       clust.nodes[[i]] <- as.integer(tmp.memb)
     }
-    return(list(pdens=pdens, pdmax=pdmax, hmax=hmax, clust.nodes=clust.nodes, cluster.edges=clust.edges))
+
+    nodes.num <- unlist(lapply(clust.nodes, length))
+    final.clust.edges    <- clust.edges[which(nodes.num > 2)]
+    final.clust.nodes    <- clust.nodes[which(nodes.num > 2)]
+   
+   return(list(cl.edges=final.clust.edges, cl.nodes=final.clust.nodes, cl.count=clust.cnt-1))
 }
+
+
+
+
+
+
+## identify the index of the edges that are clusters
+
+clust.cnt   <- 1
+#for (i in 1:clust.num) {
+#    tmp.clust   <- clust.uniq[i]
+#    tmp.idx     <- e.idx[which(clust.ids == tmp.clust)]
+#    tmp.memb    <- union(get.edgelist(myIgraph)[tmp.idx,1], get.edgelist(myIgraph)[tmp.idx,2])
+#
+#    if ( length(tmp.idx) >= 3 ) {
+#        clust.edges[[clust.cnt]] <- tmp.idx
+#        clust.nodes[[clust.cnt]] <- as.integer(tmp.memb)
+#        clust.cnt   <- clust.cnt + 1
+#    }
+#
+#}
+
+
+
+
+
 
 
 ##------------------------------------------------------------------

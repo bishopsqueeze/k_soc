@@ -208,58 +208,113 @@ convEgonetListToIgraphObject   <- function(myEgonet)
 ## For an undirected iGprah object, compute the Jaccard similarity
 ## measure between all cominations of edges in the object
 ##------------------------------------------------------------------
-calcSimilarityMatrix <- function(myIgraph, DOPARALLEL=FALSE)
+calcSimilarityMatrix <- function(myIgraph, myConEdge)
 {
     
     ## load the edges and define an output matrix
     edges       <- get.data.frame(myIgraph, what="edges")
-    edges.ch    <- convert.magic(edges, c("from","to"), c("character","character"))
     edges.num   <- ecount(myIgraph)
     
-    ## create a list of neighbors
+    ## create a list of neighbors for each vertex in the graph
     verts       <- V(myIgraph)$name
-    np.list    <- list()
+    np.list     <- list()
     for (i in 1:length(verts)) {
-        np.list[[verts[i]]]    <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
+        np.list[[verts[i]]] <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
     }
     
     ## create a list of edges
     edges.list  <- sapply(1:edges.num, function(x){list(as.character(edges[x,]))})
     
-    ## define the output matrix (this is the memory concern)
+    ## define the output matrix
     sim.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
-    rownames(sim.mat)   <- edges$from
-    colnames(sim.mat)   <- edges$to
-    
-    ## compute the matrix elements
-    if (DOPARALLEL) {
-        ## null
-    } else {
-        cat("calcSimilarityMatrix::non-parallel\n")
-        for (i in 1:(edges.num-1)) {
-            
-            ## two vectors to pass -- serve as matrices
-            jvec <- (i+1):edges.num
-            ej   <- edges.list[jvec]
-            ei   <- unlist(edges.list[i])
-            
-            ## location of the jvec index where ej edges intersect with ei edges
-            jidx <- which( unlist(lapply(ej, function(x){ length(intersect(x,ei)) })) == 1 )
-
-            if (length(jidx) > 0) {
-                sim.mat[jvec[jidx],i] <- sapply(jidx,
+    rownames(sim.mat)   <- paste0("edge",1:edges.num)
+    colnames(sim.mat)   <- paste0("edge",1:edges.num)
+  
+    cat("calcSimilarityMatrix::non-parallel\n")
+    for (i in 1:(edges.num-1)) {
+        
+        ## try to vectorize as much as possible
+        jvec    <- (i+1):edges.num
+        ej      <- edges[jvec,]
+        ei      <- unlist(edges.list[i])
+        
+        ## boolean to locate any pairwise match amongst edges
+        #jidx <- (ei[1] == ej[,1]) | (ei[2] == ej[,1]) | (ei[1] == ej[,2]) | (ei[2] == ej[,2])
+        jidx   <- as.logical(myConEdge[jvec, i])
+        
+        ## if there's a match, loop over the *subset* of
+        ## rows that match & calc the jaccard coef
+        if (sum(jidx) > 0) {
+            tidx <- jvec[jidx]
+            sim.mat[jvec[jidx],i] <- sapply(tidx,
                 function(x) {
-                    np_i  <- np.list[[ setdiff(ei, intersect(ei, edges.list[[jvec[x]]])) ]]
-                    np_j  <- np.list[[ setdiff(edges.list[[jvec[x]]], intersect(ei, edges.list[[jvec[x]]])) ]]
-                    return( length(intersect(np_i,np_j)) / length(union(np_i,np_j)) )
+                    np_i  <- np.list[[ setdiff(ei, intersect(ei, as.character(edges[x,])   )) ]]
+                    np_j  <- np.list[[ setdiff(as.character(edges[x,]), intersect(ei, as.character(edges[x,]))) ]]
+                    return( length(intersect(np_i, np_j)) / length(union(np_i, np_j)) )
                 })
-            }
+        }
+        
+        ## report progress
+        if ( (i %% 1000) == 0 ) {
+            cat("Iteration",i,"of",edges.num,"\n")
         }
     }
-    
+  
     ## return the *similarity* matrix (and not the distance)
     return(sim.mat)
 }
+
+
+
+
+
+calcConnectedEdgeMatrix <- function(myIgraph)
+{
+    ## load the edges
+    edges       <- get.data.frame(myIgraph, what="edges")
+    edges.num   <- ecount(myIgraph)
+    
+    ## create a list of edges
+    edges.list  <- sapply(1:edges.num, function(x){ list(as.character(edges[x,])) })
+    
+    ## define the output matrix
+    connectedEdge.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
+    rownames(connectedEdge.mat)   <- paste0("edge",1:edges.num)
+    colnames(connectedEdge.mat)   <- paste0("edge",1:edges.num)
+    
+    cat("calcConnectedEdgeMatrix::non-parallel\n")
+    for (i in 1:(edges.num-1)) {
+        
+        ## try to vectorize as much as possible
+        jvec    <- (i+1):edges.num
+        ej      <- edges[jvec,]
+        ei      <- unlist(edges.list[i])
+        
+        ## boolean to locate any pairwise match amongst edges
+        jidx <- 1*((ei[1] == ej[ ,1]) | (ei[2] == ej[ ,1]) | (ei[1] == ej[ ,2]) | (ei[2] == ej[ ,2]))
+        
+        ## matrix indicating where edges connect
+        connectedEdge.mat[jvec,i] <- jidx
+        
+        ## report progress
+        if ( (i %% 1000) == 0 ) {
+            cat("Iteration",i,"of",edges.num,"\n")
+        }
+    }
+    
+    ## return the matrix
+    return(connectedEdge.mat)
+}
+
+
+
+
+
+
+
+
+
+
 
 
 ##------------------------------------------------------------------

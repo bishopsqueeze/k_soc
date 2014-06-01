@@ -59,40 +59,37 @@ egoedges.count  <- unlist(lapply(egoedges.list, ecount))
 egoedges.order  <- order(egoedges.count)
 
 ## define the ouput directory for individual edges files
-output.dir  <- paste(getwd(),"sim",sep="/")
+output.dir  <- paste(getwd(),"con",sep="/")
 
 ## loop over each egonet and compute the similarity matrices
-for (i in 110:110) {
+for (i in 110:1) {
     
     ## set-up
     tmp.id          <- ego.names[egoedges.order[i]]
     tmp.edges       <- egoedges.list[[tmp.id]]
     
     ## echo progress
-    cat("Iteration", i, "of", ego.num, " :: Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
+    cat("Iteration", i, "of", ego.num, " :: Connected Edge Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
     
     ## output files
-    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".SimilarityMatrix.Rdata"), sep="/")
-    
-    ## load the connectedEdge matrix
-    load(paste0(getwd(),"/con/",tmp.id,".ConnectedEdgeMatrix.Rdata"))
-    tmp.conEdgeMat <- tmp.s
+    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".ConnectedEdgeMatrix.Rdata"), sep="/")
+    tmp.csvName     <- paste(output.dir, paste0(tmp.id,".ConnectedEdgeMatrix.csv"), sep="/")
     
     ## compute the matrices
-    tmp.sim  <- calcSimilarityMatrix(tmp.edges, tmp.conEdgeMat)
+    tmp.con  <- calcConnectedEdgeMatrix(tmp.edges)
 
     ## write intermediate results to a file
-    save(tmp.sim, file=tmp.rdataName)
+    save(tmp.con, file=tmp.rdataName)
 }
 
 
 ##------------------------------------------------------------------
 ## double check the results for the test case (i==40)
 ##------------------------------------------------------------------
-#tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[["ID_25283"]]), hcmethod="single", plot=FALSE, verbose=FALSE)
-#tmp.d  <- as.dist(1-tmp.sim)
-#tmp.h  <- hclust(tmp.d, method="single")
-#cbind(tmp.h$height, tmp.lc$hclust$height)
+##tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[["ID_25283"]]), hcmethod="single", plot=FALSE, verbose=FALSE)
+##tmp.d  <- as.dist(1-tmp.s)
+##tmp.h  <- hclust(tmp.d, method="single")
+##cbind(tmp.h$height, tmp.lc$hclust$height)
 
 
 

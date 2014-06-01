@@ -1,9 +1,6 @@
 ##------------------------------------------------------------------
-## In this script we'll compute Ahn-like communities using both the
-## similarity matrices that I constructed as well as the linkcomm()
-## package. I'd like to see agreement between the two.  If that
-## happens, then we can use a variety of hierarchical clustering
-## methods to create communities.
+## Use the similarity matrices to compare my results against
+## similar results computed using the linkcomm() package.
 ##------------------------------------------------------------------
 
 ##------------------------------------------------------------------
@@ -54,6 +51,8 @@ simDirectory    <- "/Users/alexstephens/Development/kaggle/social_circle/data/in
 ##  - Use linkcomm() to compute similar data
 ##  - Compare the two
 ##------------------------------------------------------------------
+my.clust <- list()
+lc.clust <- list()
 
 if (DO_CHECKS) {
     
@@ -68,8 +67,11 @@ if (DO_CHECKS) {
     ## define the ouput directory for individual edges files
     output.dir  <- paste(getwd(),"sim_xcheck",sep="/")
     
+    ## define a data.frame to hold benchmark statistics
+    benchmark.df    <- data.frame()
+    
     ## loop over each egonet and compute the similarity matrices
-    for (i in 3:3) {
+    for (i in 1:ego.num) {
         
         ## set-up
         tmp.id          <- ego.names[egoedges.order[i]]
@@ -91,8 +93,13 @@ if (DO_CHECKS) {
         tmp.hclust      <- hclust(tmp.dist, method="single")
         
         ## compute the partition density
-        tmp.pdens   <- calcPartitionDensity(tmp.hclust, tmp.edges)
+        tmp.pdens       <- calcPartitionDensity(tmp.hclust, tmp.edges)
         
+        ## extract clusters
+        tmp.clust       <- extractHclustClusters(tmp.hclust, tmp.pdens$hmax, tmp.edges)
+        
+        my.clust[[tmp.id]] <- tmp.clust$cl.nodes
+       
         ##------------------------------------------------------------------
         ## linkcomm() version
         ##------------------------------------------------------------------
@@ -108,24 +115,27 @@ if (DO_CHECKS) {
         lc.d    <- tmp.lc$pdens[,c("pdens")]
         cat("Sum of partition density differences = ", sum(my.h-lc.h), "\n")
         
-        ## Compare cluster membership
-        tmp.lc$clusters
+        ## Compare cluster membership (assume lincomm() == TRUE)
+        lc.clust_memb <- lapply(tmp.lc$clusters, function(x) {
+                as.integer(union(tmp.lc$edgelist[x, 1], tmp.lc$edgelist[x, 2]))
+            })
+        num.edits   <- circleEdits(lc.clust_memb, tmp.clust$cl.nodes)
+        cat("Number of Circle Edits = ", num.edits, "\n")
+        
+        lc.clust[[tmp.id]] <- lc.clust_memb
         
         cat("\n")
+        
+        ## load the benchmark dataframe
+        benchmark.df    <- rbind(benchmark.df,
+                            data.frame(id=tmp.id, ne=ecount(tmp.edges), nv=vcount(tmp.edges),
+                                       dh=sum(my.h-lc.h), dd=sum(my.h-lc.h), num.edits=num.edits))
     }
 
 }
 
-
-a <- extractHclustClusters(tmp.hclust, tmp.pdens$hmax, tmp.edges)
-
-myIgraph <- tmp.edges
-myHclust <- tmp.hclust
-myHmax <- tmp.pdens$hmax
-
-
-which(ego.names[egoedges.order] %in% names(known_circles.list))
-
+## Save the results
+save(benchmark.df, my.clust, lc.clust, file="B11_LincommBenchmarks.Rdata")
 
 ##------------------------------------------------------------------
 ## double check the results for the test case (i==40)

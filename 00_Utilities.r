@@ -485,7 +485,7 @@ extractHclustClusters <- function(myHclust, myHmax, myIgraph)
     final.clust.edges    <- clust.edges[which(nodes.num > 2)]
     final.clust.nodes    <- clust.nodes[which(nodes.num > 2)]
    
-   return(list(cl.edges=final.clust.edges, cl.nodes=final.clust.nodes, cl.count=clust.cnt-1))
+   return(list(cl.edges=final.clust.edges, cl.nodes=final.clust.nodes, cl.count=length(final.clust.nodes)))
 }
 
 

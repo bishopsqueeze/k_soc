@@ -400,3 +400,52 @@ for (i in 1:1) {
 
 
 
+##------------------------------------------------------------------
+## <function> :: calcSimilarityMatrix
+##------------------------------------------------------------------
+## Compute the (i,j)th element of a similarity matrix, given a pair
+## of edges and the neighbors for each node in the edges
+##------------------------------------------------------------------
+calcSimEikEjk <- function(myEdges, myNeighbors, i, j)
+{
+    ## get the edges to compare
+    ei  <- myEdges[i,]
+    ej  <- myEdges[j,]
+    
+    ## define a dummy keystone
+    keystone <- -1
+    
+    ## cases where there is a keystone
+    if (ei[1,1] == ej[1,1]) {
+        keystone <- ei[1,1]
+        tmp.i    <- ei[1,2]
+        tmp.j    <- ej[1,2]
+    } else if (ei[1,1]==ej[1,2]) {
+        keystone <- ei[1,1]
+        tmp.i    <- ei[1,2]
+        tmp.j    <- ej[1,1]
+    } else if (ei[1,2]==ej[1,1]) {
+        keystone <- ei[1,2]
+        tmp.i    <- ei[1,1]
+        tmp.j    <- ej[1,2]
+    } else if (ei[1,2]==ej[1,2]) {
+        keystone <- ei[1,2]
+        tmp.i    <- ei[1,1]
+        tmp.j    <- ej[1,1]
+    }
+    
+    ## if there is a keystone, then compute the Jaccard coefficient
+    if (!(keystone == -1)) {
+        np_i      <- myNeighbors[[tmp.i]]
+        np_j      <- myNeighbors[[tmp.j]]
+        SimEikEjk <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
+    } else {
+        SimEikEjk <- 0
+    }
+    
+    ## return the (i,j)th element of the matrix
+    return(SimEikEjk)
+}
+
+
+

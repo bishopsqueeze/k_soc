@@ -58,43 +58,27 @@ egoedges.count  <- unlist(lapply(egoedges.list, ecount))
 egoedges.order  <- order(egoedges.count)
 
 ## define the ouput directory for individual edges files
-output.dir  <- paste(getwd(),"sim",sep="/")
+output.dir  <- paste(getwd(),"con",sep="/")
 
 ## loop over each egonet and compute the similarity matrices
-for (i in 109:1) {
+for (i in 110:1) {
     
     ## set-up
     tmp.id          <- ego.names[egoedges.order[i]]
     tmp.edges       <- egoedges.list[[tmp.id]]
     
     ## echo progress
-    cat("Iteration", i, "of", ego.num, " :: Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
+    cat("Iteration", i, "of", ego.num, " :: Connected Edge Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
     
     ## output files
-    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".SimilarityMatrix.Rdata"), sep="/")
+    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".ConnectedEdgeMatrix.Rdata"), sep="/")
     
     ## compute the matrices
-    tmp.sim  <- calcSimilarityMatrix(tmp.edges)
+    tmp.con  <- calcConnectedEdgeMatrix(tmp.edges)
 
     ## write intermediate results to a file
-<<<<<<< HEAD
-    write(tmp.s, file=tmp.csvName)
-    write(tmp.s, file=tmp.rdataName)
-=======
-    save(tmp.sim, file=tmp.rdataName)
->>>>>>> FETCH_HEAD
+    save(tmp.con, file=tmp.rdataName)
 }
-
-
-##------------------------------------------------------------------
-## double check the results for the test case (i==40)
-##------------------------------------------------------------------
-#tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[[tmp.id]]), hcmethod="single", plot=FALSE, verbose=FALSE)
-#tmp.d  <- as.dist(1-tmp.sim)
-#tmp.h  <- hclust(tmp.d, method="single")
-#cbind(tmp.h$height, tmp.lc$hclust$height)
-
-
 
 
 

@@ -21,8 +21,8 @@ trim <- function (x)
 ##------------------------------------------------------------------
 ## A function to perform a type switch on a data.frame
 ##------------------------------------------------------------------
-convert.magic   <- function(obj, col, type) {
-    
+convert.magic   <- function(obj, col, type)
+{
     ## isolate the columns to convert
     idx <- which(colnames(obj) %in% col)
     
@@ -40,19 +40,17 @@ convert.magic   <- function(obj, col, type) {
 ##------------------------------------------------------------------
 ## A function to remove duplicates from an iGraph object
 ##------------------------------------------------------------------
-dedupEdgeList <- function(myIgraph) {
-    
+dedupEdgeList <- function(myIgraph)
+{
     ## translate igraph object into a data frame
     edge.df     <- get.data.frame(myIgraph)
     
-    ## contact edge members and then return the unique set
+    ## collapse edge members and return the unique set
     edges.all   <- paste(edge.df$from, edge.df$to, sep="_")
     edges.uniq  <- unique(edges.all)
     
-    ## translate back into a data.frame
-    output.df   <- as.data.frame(do.call("rbind",(strsplit(edges.uniq,"_"))))
-    
-    return(graph.data.frame(output.df, directed=FALSE))
+    ## translate back into an igraph object
+    return(graph.data.frame(as.data.frame(do.call("rbind",(strsplit(edges.uniq,"_")))), directed=FALSE))
 }
 
 
@@ -88,7 +86,7 @@ textToCircleList <- function(ch)
     tmp.list    <- lapply(tmp.circles,
                             function(x)
                             {
-                                            as.integer( unlist(strsplit(x," ")[[1]]) )
+                                as.integer( unlist(strsplit(x," ")[[1]]) )
                             })
     names(tmp.list) <- paste("circle", 1:length(tmp.list),sep="")
     
@@ -179,9 +177,6 @@ circleEdits  <- function(trueCircles, predCircles)
 ##------------------------------------------------------------------
 convEgonetListToIgraphObject   <- function(myEgonet)
 {
-    ## NEED TO ADD CHECK FOR IGRAPH
-    
-    
     nodes.num   <- length(myEgonet)
     edges.df    <- data.frame()
     
@@ -189,10 +184,14 @@ convEgonetListToIgraphObject   <- function(myEgonet)
     for (i in 1:nodes.num) {
         node        <- as.integer(gsub("ID_","",names(myEgonet)[i]))
         edges       <- as.integer(gsub("ID_","",myEgonet[[i]]))
+        
+        ## check to see if there is more than one edge in the list,
+        ## because if there is only one edge, we need to check
+        ## wether or not that edge is a "NULL"
         if (length(edges) > 1) {
             edges.df <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
         } else {
-            ## here we ignore friends with no friends
+            ## here we (indirectly) ignore vertices with NULL edges
             if ( !(edges == -99999) ) {
                 edges.df <- rbind(edges.df, data.frame(E1=rep(node, length(edges)), E2=edges))
             }
@@ -206,129 +205,125 @@ convEgonetListToIgraphObject   <- function(myEgonet)
 ## <function> :: calcSimilarityMatrix
 ##------------------------------------------------------------------
 ## For an undirected iGprah object, compute the Jaccard similarity
-## measure between all cominations of edges in the object
+## measure between all cominations of edges in the object.
 ##------------------------------------------------------------------
-calcSimilarityMatrix <- function(myIgraph, DOPARALLEL=FALSE)
+## This function is slow.  Even after some attempts to remove wasted
+## computations.  Can't match the speed of an external C call.
+##------------------------------------------------------------------
+calcSimilarityMatrix <- function(myIgraph)
 {
     
     ## load the edges and define an output matrix
     edges       <- get.data.frame(myIgraph, what="edges")
-    edges.ch    <- convert.magic(edges, c("from","to"), c("character","character"))
     edges.num   <- ecount(myIgraph)
     
-    ## create a list of neighbors
+    ## create a list of neighbors for each vertex in the graph
     verts       <- V(myIgraph)$name
-    np.list    <- list()
+    np.list     <- list()
     for (i in 1:length(verts)) {
-        np.list[[verts[i]]]    <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
+        np.list[[verts[i]]] <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
     }
     
     ## create a list of edges
     edges.list  <- sapply(1:edges.num, function(x){list(as.character(edges[x,]))})
     
-    ## define the output matrix (this is the memory concern)
+    ## define the output matrix
     sim.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
-    rownames(sim.mat)   <- edges$from
-    colnames(sim.mat)   <- edges$to
-    
-    ## define the set of iterators for the parallel loop
-    #ivec    <- 1:edges.num
-    #jvec    <- 1:edges.num
-    
-    ## compute the matrix elements for each iteration
-    if (DOPARALLEL) {
-        cat("calcSimilarityMatrix::parallel\n")
-        sim.mat <- foreach(i=ivec, .combine='cbind') %:%
-            foreach(j=jvec, .combine='c') %dopar% {
-                calcSimEikEjk(edges, np.list, i, j)
-            }
-    } else {
-        cat("calcSimilarityMatrix::non-parallel\n")
-        for (i in 1:(edges.num-1)) {
-            
-            
-            ## two vectors to pass -- serve as matrices
-            jvec <- (i+1):edges.num
-            #ivec <- rep(i, length(jvec))
-            
-            
-            sim.mat[jvec,i] <- sapply(jvec, function(x) {
-                ifelse ( (intersectLength(edges.list[[i]], edges.list[[x]]) > 0),
-                    getSimEikEjk(edges.list[[i]], edges.list[[x]], np.list),
-                    0 )
-            })
-            
-                #for (j in (i+1):edges.num) {
-                #sim.mat[j,i] <- calcSimEikEjk(edges, np.list, i, j)
-                #}
+    rownames(sim.mat)   <- paste0("edge",1:edges.num)
+    colnames(sim.mat)   <- paste0("edge",1:edges.num)
+  
+    ##-------------------------------------------------------------
+    ## populate the lower triangular matrix with similarity coefficients
+    ##-------------------------------------------------------------
+    cat("calcSimilarityMatrix::non-parallel\n")
+    for (i in 1:(edges.num-1)) {
+        
+        ## try to vectorize as much as possible
+        jvec    <- (i+1):edges.num
+        ej      <- edges[jvec,]
+        ei      <- unlist(edges.list[i])
+        
+        ## boolean to locate any pairwise match amongst edges
+        jidx <- (ei[1] == ej[,1]) | (ei[2] == ej[,1]) | (ei[1] == ej[,2]) | (ei[2] == ej[,2])
+        
+        ## if there's a match (i.e., jidx > 0), then loop over the
+        ## subset of rows that match & calc the Jaccard coefficient
+        if (sum(jidx) > 0) {
+            tidx <- jvec[jidx]
+            sim.mat[jvec[jidx],i] <- sapply(tidx,
+                function(x) {
+                    np_i  <- np.list[[ setdiff(ei, intersect(ei, as.character(edges[x,])   )) ]]
+                    np_j  <- np.list[[ setdiff(as.character(edges[x,]), intersect(ei, as.character(edges[x,]))) ]]
+                    return( length(intersect(np_i, np_j)) / length(union(np_i, np_j)) )
+                })
         }
+        
+        ## report progress
+        if ( (i %% 1000) == 0 ) { cat("Iteration",i,"of",edges.num,"\n") }
     }
     
-    ## return the *similarity* matrix (and not the distance)
+    ## return the *similarity* matrix
     return(sim.mat)
 }
 
 
-intersectLength <- function(edge1,edge2) { length(intersect(edge1,edge2)) }
+##------------------------------------------------------------------
+## <function> :: calcProfileSimilarityMatrix
+##------------------------------------------------------------------
 
-getSimEikEjk <- function(edge1, edge2, myNeighbors)
+## should be similar to calcSimilarity matrrix, but the initial
+## difference would be that if jidx > 0, then you'd need to
+## compute the cosine of the two feature vectors istead of the
+## Jaccard similarity matrix
+##
+## Cosine similarity
+## http://www.gettingcirrius.com/2010/12/calculating-similarity-part-1-cosine.html
+## cosine(A,B) = A %*% B / (SQRT(A %*% A) * SQRT( B %*% B))
+
+
+
+##------------------------------------------------------------------
+## <function> :: calcConnectedEdgeMatrix
+##------------------------------------------------------------------
+## For an undirected iGprah object, compute a matrix indicating
+## whether or not a pair of edges has a connecting node.  The idea
+## was to use this matrix as a lookup table to speed calculations
+## that depend on finding a match between two edges.
+##------------------------------------------------------------------
+calcConnectedEdgeMatrix <- function(myIgraph)
 {
-        edge.intersect  <- intersect(edge1,edge2)
-        np_i            <- myNeighbors[[setdiff(edge1,edge.intersect)]]
-        np_j            <- myNeighbors[[setdiff(edge2,edge.intersect)]]
-        SimEikEjk       <- length(intersect(np_i, np_j)) / length(union(np_i, np_j))
-}
-
-
-##------------------------------------------------------------------
-## <function> :: calcSimilarityMatrix
-##------------------------------------------------------------------
-## Compute the (i,j)th element of a similarity matrix, given a pair
-## of edges and the neighbors for each node in the edges
-##------------------------------------------------------------------
-calcSimEikEjk <- function(myEdges, myNeighbors, i, j)
-{
-    ## get the edges to compare
-    ei  <- myEdges[i,]
-    ej  <- myEdges[j,]
+    ## load the edges
+    edges       <- get.data.frame(myIgraph, what="edges")
+    edges.num   <- ecount(myIgraph)
     
-    ## define a dummy keystone
-    keystone <- -1
+    ## create a list of edges
+    edges.list  <- sapply(1:edges.num, function(x){ list(as.character(edges[x,])) })
     
-    ## cases where there is a keystone
-    if (ei[1,1] == ej[1,1]) {
-        keystone <- ei[1,1]
-        tmp.i    <- ei[1,2]
-        tmp.j    <- ej[1,2]
-    } else if (ei[1,1]==ej[1,2]) {
-        keystone <- ei[1,1]
-        tmp.i    <- ei[1,2]
-        tmp.j    <- ej[1,1]
-    } else if (ei[1,2]==ej[1,1]) {
-        keystone <- ei[1,2]
-        tmp.i    <- ei[1,1]
-        tmp.j    <- ej[1,2]
-    } else if (ei[1,2]==ej[1,2]) {
-        keystone <- ei[1,2]
-        tmp.i    <- ei[1,1]
-        tmp.j    <- ej[1,1]
+    ## define the output matrix
+    connectedEdge.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
+    rownames(connectedEdge.mat)   <- paste0("edge",1:edges.num)
+    colnames(connectedEdge.mat)   <- paste0("edge",1:edges.num)
+    
+    cat("calcConnectedEdgeMatrix::non-parallel\n")
+    for (i in 1:(edges.num-1)) {
+        
+        ## try to vectorize as much as possible
+        jvec    <- (i+1):edges.num
+        ej      <- edges[jvec,]
+        ei      <- unlist(edges.list[i])
+        
+        ## boolean to locate any pairwise match amongst edges
+        jidx <- 1*((ei[1] == ej[ ,1]) | (ei[2] == ej[ ,1]) | (ei[1] == ej[ ,2]) | (ei[2] == ej[ ,2]))
+        
+        ## matrix indicating where edges connect
+        connectedEdge.mat[jvec,i] <- jidx
+        
+        ## report progress
+        if ( (i %% 1000) == 0 ) { cat("Iteration",i,"of",edges.num,"\n") }
     }
-    
-    ## if there is a keystone, then compute the Jaccard coefficient
-    if (!(keystone == -1)) {
-        np_i      <- myNeighbors[[tmp.i]]
-        np_j      <- myNeighbors[[tmp.j]]
-        SimEikEjk <- (length(intersect(np_i, np_j))) / (length(union(np_i, np_j))) #+ 0.000001*runif(1)
-    } else {
-        SimEikEjk <- 0
-    }
-    
-    ## return the (i,j)th element of the matrix
-    return(SimEikEjk)
+    ## return the matrix
+    return(connectedEdge.mat)
 }
-
-
-
 
 
 ##------------------------------------------------------------------
@@ -407,9 +402,6 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
 }
 
 
-
-
-
 ##------------------------------------------------------------------
 ## <function> :: circleBalancedErrorRate
 ##------------------------------------------------------------------
@@ -443,25 +435,23 @@ circleBalancedErrorRate <- function(trueCircle, predCircle)
 
 
 
-
 ## under construction
-convClustersToTextCircle <- function(myId, myCluster)
-{
-    clust.num   <- length(myCluster)
-    circ.str    <- paste(myId,",",sep="")
-    
-    for (i in 1:clust.num) {
-        tmp.nodes   <- myCluster[[i]]
-        
-        if (i < clust.num) {
-            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),"; ",sep="")
-        } else {
-            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),sep="")
-        }
-    }
-    return(circ.str)
-    
-}
+#convClustersToTextCircle <- function(myId, myCluster)
+#{
+#    clust.num   <- length(myCluster)
+#    circ.str    <- paste(myId,",",sep="")
+#
+#    for (i in 1:clust.num) {
+#        tmp.nodes   <- myCluster[[i]]
+#
+#        if (i < clust.num) {
+#            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),"; ",sep="")
+#        } else {
+#            circ.str    <- paste(circ.str," ",paste(tmp.nodes, collapse=" "),sep="")
+#        }
+#    }
+#    return(circ.str)
+#}
 
 
 

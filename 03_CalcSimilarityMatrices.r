@@ -78,8 +78,8 @@ for (i in 1:ego.num) {
     tmp.s  <- calcSimilarityMatrix(tmp.edges, DOPARALLEL=DOPARALLEL)
 
     ## write intermediate results to a file
-    #write(tmp.s, file=tmp.csvName)
-    #write(tmp.s, file=tmp.rdataName)
+    write(tmp.s, file=tmp.csvName)
+    write(tmp.s, file=tmp.rdataName)
 }
 
 

@@ -42,9 +42,8 @@ source("/Users/alexstephens/Development/kaggle/social_circle/k_soc/00_Utilities.
 ##------------------------------------------------------------------
 ## Read in the raw data files
 ##------------------------------------------------------------------
-load("01_SocialCircle_RawData.Rdata")
-load("02_SocialCircle_Edges.Rdata")     ## edge lists
-
+load("01_SocialCircle_RawData.Rdata")       ## raw data
+load("02_SocialCircle_Edges.Rdata")         ## edge lists
 
 ##------------------------------------------------------------------
 ## Loop over the egonets, define graph objects, save to file
@@ -73,7 +72,6 @@ for (i in 110:1) {
     
     ## output files
     tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".ConnectedEdgeMatrix.Rdata"), sep="/")
-    tmp.csvName     <- paste(output.dir, paste0(tmp.id,".ConnectedEdgeMatrix.csv"), sep="/")
     
     ## compute the matrices
     tmp.con  <- calcConnectedEdgeMatrix(tmp.edges)
@@ -81,17 +79,6 @@ for (i in 110:1) {
     ## write intermediate results to a file
     save(tmp.con, file=tmp.rdataName)
 }
-
-
-##------------------------------------------------------------------
-## double check the results for the test case (i==40)
-##------------------------------------------------------------------
-##tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[["ID_25283"]]), hcmethod="single", plot=FALSE, verbose=FALSE)
-##tmp.d  <- as.dist(1-tmp.s)
-##tmp.h  <- hclust(tmp.d, method="single")
-##cbind(tmp.h$height, tmp.lc$hclust$height)
-
-
 
 
 

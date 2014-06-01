@@ -42,9 +42,8 @@ source("/Users/alexstephens/Development/kaggle/social_circle/k_soc/00_Utilities.
 ##------------------------------------------------------------------
 ## Read in the raw data files
 ##------------------------------------------------------------------
-load("01_SocialCircle_RawData.Rdata")
-load("02_SocialCircle_Edges.Rdata")     ## edge lists
-
+load("01_SocialCircle_RawData.Rdata")       ## raw data
+load("02_SocialCircle_Edges.Rdata")         ## edge lists
 
 ##------------------------------------------------------------------
 ## Loop over the egonets, define graph objects, save to file
@@ -62,7 +61,7 @@ egoedges.order  <- order(egoedges.count)
 output.dir  <- paste(getwd(),"sim",sep="/")
 
 ## loop over each egonet and compute the similarity matrices
-for (i in 110:110) {
+for (i in 109:1) {
     
     ## set-up
     tmp.id          <- ego.names[egoedges.order[i]]
@@ -74,12 +73,8 @@ for (i in 110:110) {
     ## output files
     tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".SimilarityMatrix.Rdata"), sep="/")
     
-    ## load the connectedEdge matrix
-    load(paste0(getwd(),"/con/",tmp.id,".ConnectedEdgeMatrix.Rdata"))
-    tmp.conEdgeMat <- tmp.s
-    
     ## compute the matrices
-    tmp.sim  <- calcSimilarityMatrix(tmp.edges, tmp.conEdgeMat)
+    tmp.sim  <- calcSimilarityMatrix(tmp.edges)
 
     ## write intermediate results to a file
     save(tmp.sim, file=tmp.rdataName)
@@ -89,7 +84,7 @@ for (i in 110:110) {
 ##------------------------------------------------------------------
 ## double check the results for the test case (i==40)
 ##------------------------------------------------------------------
-#tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[["ID_25283"]]), hcmethod="single", plot=FALSE, verbose=FALSE)
+#tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[[tmp.id]]), hcmethod="single", plot=FALSE, verbose=FALSE)
 #tmp.d  <- as.dist(1-tmp.sim)
 #tmp.h  <- hclust(tmp.d, method="single")
 #cbind(tmp.h$height, tmp.lc$hclust$height)

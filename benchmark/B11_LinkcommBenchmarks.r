@@ -98,8 +98,9 @@ if (DO_CHECKS) {
         ## extract clusters
         tmp.clust       <- extractHclustClusters(tmp.hclust, tmp.pdens$hmax, tmp.edges)
         
-        my.clust[[tmp.id]] <- tmp.clust$cl.nodes
-       
+        my.clust[[tmp.id]]$memb <- tmp.clust$cl.nodes
+        my.clust[[tmp.id]]$pden <- tmp.pdens
+        
         ##------------------------------------------------------------------
         ## linkcomm() version
         ##------------------------------------------------------------------
@@ -113,29 +114,30 @@ if (DO_CHECKS) {
         ## Compare computed partition densities
         my.d    <- c(0, tmp.pdens$pdens[,c("den")])
         lc.d    <- tmp.lc$pdens[,c("pdens")]
-        cat("Sum of partition density differences = ", sum(my.h-lc.h), "\n")
+        cat("Sum of partition density differences = ", sum(my.d-lc.d), "\n")
         
         ## Compare cluster membership (assume lincomm() == TRUE)
         lc.clust_memb <- lapply(tmp.lc$clusters, function(x) {
                 as.integer(union(tmp.lc$edgelist[x, 1], tmp.lc$edgelist[x, 2]))
             })
         num.edits   <- circleEdits(lc.clust_memb, tmp.clust$cl.nodes)
-        cat("Number of Circle Edits = ", num.edits, "\n")
+        cat("Number of Circle Edits = ", num.edits, "\n\n")
         
-        lc.clust[[tmp.id]] <- lc.clust_memb
-        
-        cat("\n")
+        lc.clust[[tmp.id]]$memb <- lc.clust_memb
+        lc.clust[[tmp.id]]$pden <- tmp.lc$pdens
         
         ## load the benchmark dataframe
         benchmark.df    <- rbind(benchmark.df,
                             data.frame(id=tmp.id, ne=ecount(tmp.edges), nv=vcount(tmp.edges),
-                                       dh=sum(my.h-lc.h), dd=sum(my.h-lc.h), num.edits=num.edits))
+                                       dh=sum(my.h-lc.h), dd=sum(my.d-lc.d), num.edits=num.edits))
     }
 
 }
 
 ## Save the results
-save(benchmark.df, my.clust, lc.clust, file="B11_LincommBenchmarks.Rdata")
+## V01 - was run with height differences being reported for densities
+## V02 - corrects the density mis-calculation
+save(benchmark.df, my.clust, lc.clust, file="B11_LincommBenchmarks_V02.Rdata")
 
 ##------------------------------------------------------------------
 ## double check the results for the test case (i==40)

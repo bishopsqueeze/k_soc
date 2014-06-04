@@ -117,7 +117,7 @@ for (i in 1:train.num) { #train.num
         ## calc dissimilarity, generate a cluster, calc parition density
         tmp.dist        <- as.dist(1 - sim.combined)
         tmp.hclust      <- hclust(tmp.dist, method="single")
-        tmp.pdens       <- calcPartitionDensity(tmp.hclust, tmp.edges)
+        tmp.pdens       <- calcPartitionDensity(tmp.hclust, tmp.edges)      ## slooooooooooooooooow
         
         ## extract clusters; purge clusters of non-vertices from the egonet
         tmp.clust       <- extractHclustClusters(tmp.hclust, tmp.pdens$hmax, tmp.edges)
@@ -146,4 +146,8 @@ for (i in 1:train.num) { #train.num
     
     sweep.res[[tmp.id]]$benchmark   <- benchmark.df
 }
+
+## Save results
+save(sweep.res, file="B20_PureSimilarityAndPureProfileBenchmarks.Rdata")
+
 

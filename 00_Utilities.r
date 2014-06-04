@@ -407,7 +407,7 @@ calcConnectedEdgeMatrix <- function(myIgraph)
 ##------------------------------------------------------------------
 calcPartitionDensity    <- function(myHclust, myIgraph)
 {
-    h.vec       <- unique(myHclust$height)
+    h.vec       <- unique(round(myHclust$height, digits = 5))  ## from linkcomm()::unique(round(hcedges$height, digits = 5))
     h.num       <- length(h.vec)
     e.num       <- ecount(myIgraph)
     e.idx       <- 1:e.num
@@ -415,7 +415,12 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     ## vector to hold the identify of group members at each height
     clust.vec   <- vector(, length=h.num)
     dens.vec    <- vector(, length=h.num)
-    
+  
+  
+##
+## The double loop may be slow
+##
+  
     ## loop each height and compute the partition density
     for (i in 1:h.num) {
         
@@ -427,11 +432,17 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
         ## loop over all groups at a height and compute the density
         for (j in 1:groups.num) {
             
+## I'll be the "which" is slow
+## is there a better way to get the Igraph data???
+## maybe to a single get.edgelist() outside the loops? and then index it later
+            
             ## identify location of the group memebers
             tmp.idx     <- which(clust.vec == groups.uniq[j])
             tmp.memb    <- union(get.edgelist(myIgraph)[tmp.idx,1], get.edgelist(myIgraph)[tmp.idx,2])
             
             ## compute the number of nodes and edges in the group
+            
+## since this is just a length, can use sum(clust.vec == groups.uniq[j]) w/no assignment? just one step
             tmp.mc      <- length(tmp.idx)
             tmp.nc      <- length(tmp.memb)
             

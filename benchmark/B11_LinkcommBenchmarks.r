@@ -71,7 +71,8 @@ if (DO_CHECKS) {
     benchmark.df    <- data.frame()
     
     ## loop over each egonet and compute the similarity matrices
-    for (i in 1:ego.num) {
+    #for (i in 1:ego.num) {
+    for (i in 14:14) {
         
         ## set-up
         tmp.id          <- ego.names[egoedges.order[i]]
@@ -137,7 +138,7 @@ if (DO_CHECKS) {
 ## Save the results
 ## V01 - was run with height differences being reported for densities
 ## V02 - corrects the density mis-calculation
-save(benchmark.df, my.clust, lc.clust, file="B11_LincommBenchmarks_V02.Rdata")
+#save(benchmark.df, my.clust, lc.clust, file="B11_LincommBenchmarks_V02.Rdata")
 
 ##------------------------------------------------------------------
 ## double check the results for the test case (i==40)
@@ -148,6 +149,8 @@ save(benchmark.df, my.clust, lc.clust, file="B11_LincommBenchmarks_V02.Rdata")
 #cbind(tmp.h$height, tmp.lc$hclust$height)
 
 
+
+## Troubleshooting differences in pdens
 
 
 

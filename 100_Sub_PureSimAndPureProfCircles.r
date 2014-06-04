@@ -69,7 +69,7 @@ sweep.res       <- list()
 ##------------------------------------------------------------------
 ## for the sweep tests, loop over known circles only
 ##------------------------------------------------------------------
-for (i in 1:2) { #train.num
+for (i in 1:20) { #train.num
     
     ## set-up
     tmp.id          <- ego.names[ego.order[i]]

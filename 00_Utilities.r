@@ -407,60 +407,70 @@ calcConnectedEdgeMatrix <- function(myIgraph)
 ##------------------------------------------------------------------
 calcPartitionDensity    <- function(myHclust, myIgraph)
 {
-    h.vec       <- unique(round(myHclust$height, digits = 5))  ## from linkcomm()::unique(round(hcedges$height, digits = 5))
+    h.vec       <- unique(myHclust$height)  ## from linkcomm()::unique(round(hcedges$height, digits = 5))
     h.num       <- length(h.vec)
-    e.num       <- ecount(myIgraph)
+
+    ## get edgelists once beginning
+    edgelist.L  <- get.edgelist(myIgraph)[,1]
+    edgelist.R  <- get.edgelist(myIgraph)[,2]
+    e.num       <- length(edgelist.L)
     e.idx       <- 1:e.num
     
     ## vector to hold the identify of group members at each height
     clust.vec   <- vector(, length=h.num)
     dens.vec    <- vector(, length=h.num)
   
-  
+#hh <- unique(round(hcedges$height, digits = 5))
+#countClusters <- function(x,ht){return(length(which(ht==x)))}
+#clusnums <- sapply(hh, countClusters, ht = round(hcedges$height, digits = 5)) # Number of clusters at each height.
+#ldlist <- .C("getLinkDensities",as.integer(hcedges$merge[,1]), as.integer(hcedges$merge[,2]), as.integer(edges[,1]), as.integer(edges[,2]), as.integer(len), as.integer(clusnums), pdens = double(length(hh)), heights = as.double(hh), pdmax = double(1), csize = integer(1), as.logical(removetrivial), as.logical(bipartite), as.integer(bip), as.logical(verbose))
+#pdens <- c(0,ldlist$pdens)
+#heights <- c(0,hh)
+#pdmax <- ldlist$pdmax
+#csize <- ldlist$csize
+
 ##
 ## The double loop may be slow
 ##
-  
+#clust.list <- sapply(h.vec, function(x){cutree(myHclust, h=x)})
+
     ## loop each height and compute the partition density
     for (i in 1:h.num) {
         
         clust.vec     <- as.vector(cutree(myHclust, h=h.vec[i]))
         groups.uniq   <- unique(clust.vec)
-        groups.num    <- length(groups.uniq)
+        # groups.num    <- length(groups.uniq)
         tmp.dens      <- 0
         
+        tmp.M <- 0
+        tmp.N <- 0
         ## loop over all groups at a height and compute the density
-        for (j in 1:groups.num) {
-            
-## I'll be the "which" is slow
-## is there a better way to get the Igraph data???
-## maybe to a single get.edgelist() outside the loops? and then index it later
+        for (j in 1:length(groups.uniq)) {
             
             ## identify location of the group memebers
-            tmp.idx     <- which(clust.vec == groups.uniq[j])
-            tmp.memb    <- union(get.edgelist(myIgraph)[tmp.idx,1], get.edgelist(myIgraph)[tmp.idx,2])
+            tmp.idx     <- (clust.vec == groups.uniq[j])
+            tmp.memb    <- union(edgelist.L[tmp.idx], edgelist.R[tmp.idx])
             
             ## compute the number of nodes and edges in the group
             
-## since this is just a length, can use sum(clust.vec == groups.uniq[j]) w/no assignment? just one step
-            tmp.mc      <- length(tmp.idx)
+            ## since this is just a length, can use sum(clust.vec == groups.uniq[j]) w/no assignment? just one step
+            tmp.mc      <- sum(tmp.idx) ##length(tmp.idx)
             tmp.nc      <- length(tmp.memb)
             
             ## by convention, clusers with two nodes has a density of 0
             if (tmp.nc > 2) {
-                tmp.dens    <- tmp.dens + 2*tmp.mc*(tmp.mc - (tmp.nc-1))/(e.num*(tmp.nc-2)*(tmp.nc-1))
+                tmp.dens    <- tmp.dens + (2*tmp.mc/e.num)*(tmp.mc - (tmp.nc-1))/((tmp.nc-2)*(tmp.nc-1))
             }
+            tmp.M <- tmp.mc + tmp.M
+            tmp.N <- tmp.nc + tmp.N
         }
         dens.vec[i] <- tmp.dens
         
     }
     
     ## idenitfy the maximum density & corresponding height
-    pdens   <- data.frame(h=h.vec, den=dens.vec)
-    pdmax   <- max(dens.vec)
-    hmax    <- min(h.vec[dens.vec == pdmax])    ## extra max wrapper when there are pdens ties
-    
-    return(list(pdens=pdens, pdmax=pdmax, hmax=hmax))
+    pdmax <- max(dens.vec)
+    return(list(pdens=data.frame(h=h.vec, den=dens.vec), pdmax=pdmax, hmax=max(h.vec[dens.vec == pdmax])))
 }
 
 

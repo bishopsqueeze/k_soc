@@ -149,6 +149,6 @@ for (i in 1:20) { #train.num
 }
 
 ## Save results
-save(sweep.res, file="B20_PureSimilarityAndPureProfileBenchmarks.Rdata")
+##save(sweep.res, file="B20_PureSimilarityAndPureProfileBenchmarks.Rdata")
 
 

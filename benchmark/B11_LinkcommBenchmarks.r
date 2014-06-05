@@ -72,7 +72,7 @@ if (DO_CHECKS) {
     
     ## loop over each egonet and compute the similarity matrices
     #for (i in 1:ego.num) {
-    for (i in 14:14) {
+    for (i in 1:20) {
         
         ## set-up
         tmp.id          <- ego.names[egoedges.order[i]]
@@ -135,22 +135,21 @@ if (DO_CHECKS) {
 
 }
 
-## Save the results
-## V01 - was run with height differences being reported for densities
-## V02 - corrects the density mis-calculation
-#save(benchmark.df, my.clust, lc.clust, file="B11_LincommBenchmarks_V02.Rdata")
+
 
 ##------------------------------------------------------------------
 ## double check the results for the test case (i==40)
 ##------------------------------------------------------------------
-#tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[[tmp.id]]), hcmethod="single", plot=FALSE, verbose=FALSE)
-#tmp.d  <- as.dist(1-tmp.sim)
-#tmp.h  <- hclust(tmp.d, method="single")
-#cbind(tmp.h$height, tmp.lc$hclust$height)
 
+#lc.clust[[tmp.id]]$memb
+#my.clust[[tmp.id]]$memb
+#> myIgraph <- tmp.edges
+#> myHclust <- tmp.hclust
 
+#total of 17; two with 3 members
+#272 299 308  # last 3 in my list
+#244 257 328 # 5th in my list
 
-## Troubleshooting differences in pdens
 
 
 

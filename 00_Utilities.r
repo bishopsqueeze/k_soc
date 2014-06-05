@@ -407,6 +407,7 @@ calcConnectedEdgeMatrix <- function(myIgraph)
 ##------------------------------------------------------------------
 calcPartitionDensity    <- function(myHclust, myIgraph)
 {
+    ## get cluster height info
     h.vec       <- unique(myHclust$height)  ## from linkcomm()::unique(round(hcedges$height, digits = 5))
     h.num       <- length(h.vec)
 
@@ -417,17 +418,8 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     e.idx       <- 1:e.num
     
     ## vector to hold the identify of group members at each height
-    clust.vec   <- vector(, length=h.num)
-    dens.vec    <- vector(, length=h.num)
-  
-#hh <- unique(round(hcedges$height, digits = 5))
-#countClusters <- function(x,ht){return(length(which(ht==x)))}
-#clusnums <- sapply(hh, countClusters, ht = round(hcedges$height, digits = 5)) # Number of clusters at each height.
-#ldlist <- .C("getLinkDensities",as.integer(hcedges$merge[,1]), as.integer(hcedges$merge[,2]), as.integer(edges[,1]), as.integer(edges[,2]), as.integer(len), as.integer(clusnums), pdens = double(length(hh)), heights = as.double(hh), pdmax = double(1), csize = integer(1), as.logical(removetrivial), as.logical(bipartite), as.integer(bip), as.logical(verbose))
-#pdens <- c(0,ldlist$pdens)
-#heights <- c(0,hh)
-#pdmax <- ldlist$pdmax
-#csize <- ldlist$csize
+    clust.vec   <- vector("integer", length=h.num)
+    dens.vec    <- vector("numeric", length=h.num)
 
 ##
 ## The double loop may be slow
@@ -439,11 +431,10 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
         
         clust.vec     <- as.vector(cutree(myHclust, h=h.vec[i]))
         groups.uniq   <- unique(clust.vec)
-        # groups.num    <- length(groups.uniq)
         tmp.dens      <- 0
+        #tmp.M         <- 0
+        #tmp.N         <- 0
         
-        tmp.M <- 0
-        tmp.N <- 0
         ## loop over all groups at a height and compute the density
         for (j in 1:length(groups.uniq)) {
             
@@ -452,17 +443,15 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
             tmp.memb    <- union(edgelist.L[tmp.idx], edgelist.R[tmp.idx])
             
             ## compute the number of nodes and edges in the group
-            
-            ## since this is just a length, can use sum(clust.vec == groups.uniq[j]) w/no assignment? just one step
-            tmp.mc      <- sum(tmp.idx) ##length(tmp.idx)
+            tmp.mc      <- sum(tmp.idx)
             tmp.nc      <- length(tmp.memb)
             
-            ## by convention, clusers with two nodes has a density of 0
+            ## by convention, clusers with two nodes have a density = 0
             if (tmp.nc > 2) {
                 tmp.dens    <- tmp.dens + (2*tmp.mc/e.num)*(tmp.mc - (tmp.nc-1))/((tmp.nc-2)*(tmp.nc-1))
             }
-            tmp.M <- tmp.mc + tmp.M
-            tmp.N <- tmp.nc + tmp.N
+            #tmp.M <- tmp.mc + tmp.M
+            #tmp.N <- tmp.nc + tmp.N
         }
         dens.vec[i] <- tmp.dens
         
@@ -470,7 +459,9 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     
     ## idenitfy the maximum density & corresponding height
     pdmax <- max(dens.vec)
-    return(list(pdens=data.frame(h=h.vec, den=dens.vec), pdmax=pdmax, hmax=max(h.vec[dens.vec == pdmax])))
+    return(list(    pdens=data.frame(h=h.vec, den=dens.vec),
+                    pdmax=pdmax,
+                    hmax=max(h.vec[dens.vec == pdmax])))
 }
 
 
@@ -481,32 +472,42 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
 ##------------------------------------------------------------------
 extractHclustClusters <- function(myHclust, myHmax, myIgraph)
 {
-    
+    ## get cluster info @ hmax
     clust.ids   <- cutree(myHclust, h=myHmax)
     clust.uniq  <- unique(clust.ids)
     clust.num   <- length(clust.uniq)
-
-    e.num       <- ecount(myIgraph)
+    
+    ## get edgelists once at the beginning
+    edgelist.L  <- get.edgelist(myIgraph)[,1]
+    edgelist.R  <- get.edgelist(myIgraph)[,2]
+    e.num       <- length(edgelist.L)
     e.idx       <- 1:e.num
 
+    ## vectors to hold the number of nodes (nc) and links (mc)
+    mc.vec    <- vector("integer", length=length(clust.uniq))
+    #nc.vec    <- vector("integer", length=length(clust.uniq))
+    
+    ## placeholders for output
     clust.edges <- list()
     clust.nodes <- list()
-    
+
+    ## loop over each cluster
     for (i in 1:clust.num) {
        
-       tmp.clust   <- clust.uniq[i]
-       tmp.idx     <- e.idx[(clust.ids == tmp.clust)]
-       tmp.memb    <- union(get.edgelist(myIgraph)[tmp.idx,1], get.edgelist(myIgraph)[tmp.idx,2])
+       ## identify location of the group memebers
+       tmp.idx     <- (clust.ids == clust.uniq[i])
+       #tmp.memb    <- union(edgelist.L[tmp.idx], edgelist.R[tmp.idx]
 
-       clust.edges[[i]] <- tmp.idx
-       clust.nodes[[i]] <- as.integer(tmp.memb)
+       clust.edges[[i]] <- e.idx[tmp.idx]
+       clust.nodes[[i]] <- as.integer(union(edgelist.L[tmp.idx], edgelist.R[tmp.idx]))
+       
+       mc.vec[i]      <- sum(tmp.idx) ##length(tmp.idx)
+       #nc.vec[i]     <- length(tmp.memb)
     }
 
-    nodes.num <- unlist(lapply(clust.nodes, length))
-    final.clust.edges    <- clust.edges[which(nodes.num > 2)]
-    final.clust.nodes    <- clust.nodes[which(nodes.num > 2)]
-   
-   return(list(cl.edges=final.clust.edges, cl.nodes=final.clust.nodes, cl.count=length(final.clust.nodes)))
+    return(list(cl.edges=clust.edges[(mc.vec > 2)],
+                cl.nodes=clust.nodes[(mc.vec > 2)],
+                cl.count=length(clust.edges[(mc.vec > 2)])))
 }
 
 

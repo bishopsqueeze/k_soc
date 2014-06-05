@@ -71,8 +71,8 @@ if (DO_CHECKS) {
     benchmark.df    <- data.frame()
     
     ## loop over each egonet and compute the similarity matrices
-    #for (i in 1:ego.num) {
-    for (i in 1:20) {
+    for (i in 1:ego.num) {
+    #for (i in 1:20) {
         
         ## set-up
         tmp.id          <- ego.names[egoedges.order[i]]
@@ -135,6 +135,16 @@ if (DO_CHECKS) {
 
 }
 
+##------------------------------------------------------------------
+## Only run through ~ 104 of 110 b/c I don't know if I'm the bottleneck
+## (probably) or if the linkcomm program that is writing to disk is slow.
+##------------------------------------------------------------------
+
+
+##------------------------------------------------------------------
+## Save results to disk
+##------------------------------------------------------------------
+##save(benchmark.df, file="B11_LinkcommBenchmarks.Rdata")
 
 
 ##------------------------------------------------------------------

@@ -312,7 +312,7 @@ calcSimilarityMatrix <- function(myIgraph)
 ## http://www.gettingcirrius.com/2010/12/calculating-similarity-part-1-cosine.html
 ## cosine(A,B) = A %*% B / (SQRT(A %*% A) * SQRT( B %*% B))
 ##------------------------------------------------------------------
-calcProfileSimilarityMatrix <- function(myIgraph, myLeafMatrix)
+calcProfileSimilarityMatrix <- function(myIgraph, myProfMatrix)
 {
     
     ## load the edges and define an output matrix
@@ -356,12 +356,78 @@ calcProfileSimilarityMatrix <- function(myIgraph, myLeafMatrix)
             prof.mat[jvec[jidx],i] <- sapply(tidx,
             function(x) {
                 ij_id  <- paste0("ID_",setdiff(union(ei, as.character(edges[x,])),intersect(ei, as.character(edges[x,]))))
-                 return( calcCosineSimilarity( myLeafMatrix[, ij_id[1]], myLeafMatrix[, ij_id[2]] ) )
+                 return( calcCosineSimilarity( myProfMatrix[, ij_id[1]], myProfMatrix[, ij_id[2]] ) )
             })
         }
         
         ## report progress
         if ( (i %% 1000) == 0 ) { cat("Iteration",i,"of",edges.num,"\n") }
+    }
+    
+    ## return the *similarity* matrix
+    return(prof.mat)
+}
+
+
+
+
+
+
+## Here the point is to calculate |sigma(x,u)-sigma(y,u)| ... whereas
+## in the above we were always computing sigma(x,y)
+calcEgoSimilarityMatrix <- function(myId, myIgraph, myProfMatrix)
+{
+    ## get the user-specific data (neighbors are the graph vertices)
+    ## - not needed
+    
+    ## load the edges and define an output matrix
+    edges       <- get.data.frame(myIgraph, what="edges")
+    edges.num   <- ecount(myIgraph)
+    
+    ## create a list of neighbors for each vertex in the graph
+    verts       <- V(myIgraph)$name
+    np.list     <- list()
+    for (i in 1:length(verts)) {
+        np.list[[verts[i]]] <- c(V(myIgraph)[i]$name, V(myIgraph)[nei(i)]$name)
+    }
+    
+    ## create a list of edges
+    edges.list  <- sapply(1:edges.num, function(x){list(as.character(edges[x,]))})
+    
+    ## define the output matrix
+    prof.mat             <- matrix(0,nrow=edges.num, ncol=edges.num)
+    rownames(prof.mat)   <- paste0("edge",1:edges.num)
+    colnames(prof.mat)   <- paste0("edge",1:edges.num)
+    
+    ##-------------------------------------------------------------
+    ## populate the lower triangular matrix with similarity coefficients
+    ##-------------------------------------------------------------
+    cat("calcEgoSimilarityMatrix::non-parallel\n")
+    for (i in 1:(edges.num-1)) {
+        
+        ## try to vectorize as much as possible
+        jvec    <- (i+1):edges.num
+        ej      <- edges[jvec,]
+        ei      <- unlist(edges.list[i])
+        
+        ## boolean to locate any pairwise match amongst edges
+        jidx <- (ei[1] == ej[,1]) | (ei[2] == ej[,1]) | (ei[1] == ej[,2]) | (ei[2] == ej[,2])
+        
+        ## if there's a match (i.e., jidx > 0), then loop over the
+        ## subset of rows that match & calc the Jaccard coefficient
+        if (sum(jidx) > 0) {
+            tidx <- jvec[jidx]
+            
+            prof.mat[jvec[jidx],i] <- sapply(tidx,
+            function(x) {
+                ij_id  <- paste0("ID_",setdiff(union(ei, as.character(edges[x,])),intersect(ei, as.character(edges[x,]))))
+                
+                ## here's where we'd compute |sigma(x,u)-sigma(y,u)| ... probably need to normalize
+                return(abs(calcCosineSimilarity(myProfMatrix[, ij_id[1]], myProfMatrix[, myId]) - calcCosineSimilarity(myProfMatrix[, ij_id[2]], myProfMatrix[, myId])))
+            })
+        }
+        ## report progress
+        if ((i %% 1000) == 0) { cat("Iteration",i,"of",edges.num,"\n") }
     }
     
     ## return the *similarity* matrix

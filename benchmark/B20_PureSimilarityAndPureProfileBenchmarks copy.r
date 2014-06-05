@@ -82,8 +82,8 @@ sweep.res       <- list()
 ##------------------------------------------------------------------
 ## for the sweep tests, loop over known circles only
 ##------------------------------------------------------------------
-for (i in 1:20) { #train.num
-#for (i in 1:train.num) { #train.num
+#for (i in 1:20) { #train.num
+for (i in 1:train.num) { #train.num
     
     ## set-up
     tmp.id          <- train.names[train.order[i]]
@@ -158,6 +158,6 @@ for (i in 1:20) { #train.num
 }
 
 ## Save results
-##save(sweep.res, file="B20_PureSimilarityAndPureProfileBenchmarks.Rdata")
+save(sweep.res, file="B20_PureSimilarityAndPureProfileBenchmarks.Rdata")
 
 

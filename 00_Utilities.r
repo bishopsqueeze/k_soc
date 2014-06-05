@@ -6,6 +6,24 @@
 ##------------------------------------------------------------------
 
 ##------------------------------------------------------------------
+## Load libraries
+##------------------------------------------------------------------
+library(igraph)                 ## contains graph functions
+library(caTools)
+library(linkcomm)
+library(data.table)
+
+library(caret)
+library(foreach)
+library(doMC)
+
+##------------------------------------------------------------------
+## register cores
+##------------------------------------------------------------------
+registerDoMC(4)
+
+
+##------------------------------------------------------------------
 ## <function> :: trim
 ##------------------------------------------------------------------
 ## Remove leading/trailing whitespace from a character string
@@ -421,14 +439,9 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
     clust.vec   <- vector("integer", length=h.num)
     dens.vec    <- vector("numeric", length=h.num)
 
-##
-## The double loop may be slow
-##
-#clust.list <- sapply(h.vec, function(x){cutree(myHclust, h=x)})
-
-    ## loop each height and compute the partition density
-    for (i in 1:h.num) {
-        
+    ## [parallel] loop over each height and compute the partition density
+    dens.vec <- foreach(i=1:h.num, .combine='c') %dopar%
+    {
         clust.vec     <- as.vector(cutree(myHclust, h=h.vec[i]))
         groups.uniq   <- unique(clust.vec)
         tmp.dens      <- 0
@@ -453,8 +466,8 @@ calcPartitionDensity    <- function(myHclust, myIgraph)
             #tmp.M <- tmp.mc + tmp.M
             #tmp.N <- tmp.nc + tmp.N
         }
-        dens.vec[i] <- tmp.dens
-        
+        ##dens.vec[i] <- tmp.dens
+        return(tmp.dens)
     }
     
     ## idenitfy the maximum density & corresponding height

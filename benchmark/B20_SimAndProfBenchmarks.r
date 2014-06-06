@@ -160,6 +160,6 @@ for (i in 1:train.num) { #train.num
 ##------------------------------------------------------------------
 ## Save results
 ##------------------------------------------------------------------
-save(sweep.res, file="B20_PureSimilarityAndPureProfileBenchmarks.Rdata")
+save(sweep.res, file="B20_SimAndProBenchmarks.Rdata")
 
 

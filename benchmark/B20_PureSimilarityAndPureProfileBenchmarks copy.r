@@ -157,7 +157,9 @@ for (i in 1:train.num) { #train.num
     sweep.res[[tmp.id]]$benchmark   <- benchmark.df
 }
 
+##------------------------------------------------------------------
 ## Save results
+##------------------------------------------------------------------
 save(sweep.res, file="B20_PureSimilarityAndPureProfileBenchmarks.Rdata")
 
 

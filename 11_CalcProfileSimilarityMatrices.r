@@ -1,5 +1,16 @@
 ##------------------------------------------------------------------
+## The purpose of this script is to compute a "profile similarity"
+## matrix for each egonet, where the profile similarity represents
+## the level of similarity between two sets of feature vectors.
 ##
+## The feature vectors encode information about each individual
+## (e.g., name, birthday, education, work, etc.) ... so it serves
+## as another means of identifying common information within an
+## ego network.
+##
+## The script will compute similarity matrices for two types of
+## feature vector:  the full dataset, and subset of data that is
+## likely to elicit an acutal match.
 ##------------------------------------------------------------------
 
 ##------------------------------------------------------------------
@@ -46,7 +57,7 @@ load("01_SocialCircle_RawData.Rdata")       ## raw data
 load("02_SocialCircle_Edges.Rdata")         ## edge lists
 
 ##------------------------------------------------------------------
-## Loop over the egonets, define graph objects, save to file
+## set-up
 ##------------------------------------------------------------------
 
 ## extract egonet data
@@ -57,55 +68,46 @@ ego.num         <- length(ego.names)
 egoedges.count  <- unlist(lapply(egoedges.list, ecount))
 egoedges.order  <- order(egoedges.count)
 
-## define the ouput directory for individual edges files
-output.dir  <- paste(getwd(),"sim",sep="/")
-
-## loop over each egonet and compute the similarity matrices
-for (i in 1:109) {
+##------------------------------------------------------------------
+## loop over each egonet and compute the similarity matrices for
+## both the full feature vector and the reduced size feature vector
+##------------------------------------------------------------------
+for (i in 110:1) {
     
+    ##------------------------------------------------------------------
     ## set-up
+    ##------------------------------------------------------------------
     tmp.id          <- ego.names[egoedges.order[i]]
     tmp.edges       <- egoedges.list[[tmp.id]]
     
+    ##------------------------------------------------------------------
     ## echo progress
+    ##------------------------------------------------------------------
     cat("Iteration", i, "of", ego.num, " :: Profile Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
     
+    ##------------------------------------------------------------------
     ## load the profile matrix
-    tmp.profFile    <- paste0(getwd(),"/prof/",paste0(tmp.id,".ProfileMatrix.Rdata"))
-    load(tmp.profFile)
+    ##------------------------------------------------------------------
+    load(paste0(getwd(),"/prof/",paste0(tmp.id,".ProfileMatrix.Rdata")))
     
-    ## output files
-    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".ProfileSimilarityMatrix.Rdata"), sep="/")
+    ##------------------------------------------------------------------
+    ## deifne output filenames
+    ##------------------------------------------------------------------
+    tmp.fullFeatureset      <- paste( paste(getwd(),"orig.sim.prof.full",sep="/"), paste0(tmp.id, ".FullProfileSimilarityMatrix.Rdata"), sep="/")
+    tmp.reducedFeatureset   <- paste( paste(getwd(),"orig.sim.prof.reduced",sep="/"), paste0(tmp.id, ".ReducedProfileSimilarityMatrix.Rdata"), sep="/")
     
-    ## compute the matrices
-    tmp.profSim  <- calcProfileSimilarityMatrix(tmp.edges, tmp.leafMatrix)
-
-    ## write intermediate results to a file
-    save(tmp.profSim, file=tmp.rdataName)
-
+    ##------------------------------------------------------------------
+    ## compute the matrices & immediately write to file
+    ##------------------------------------------------------------------
+    
+    ## full profile
+    tmp.fullProfileSim      <- calcProfileSimilarityMatrix(tmp.edges, tmp.leafMatrix)
+    save(tmp.fullProfileSim,    file=tmp.fullFeatureset)
+    
+    ## reduced profile
+    tmp.reducedProfileSim   <- calcProfileSimilarityMatrix(tmp.edges, tmp.leafMatrixExDropsRows)
+    save(tmp.reducedProfileSim, file=tmp.reducedFeatureset)
 }
-
-
-
-
-
-
-## --- debug ---
-myIgraph <- tmp.edges
-myLeafMatrix <- tmp.leafMatrix
-
-## load the profile matrix
-tmp.simFile    <- paste0(getwd(),"/sim/",paste0(tmp.id,".SimilarityMatrix.Rdata"))
-load(tmp.simFile)
-
-
-##------------------------------------------------------------------
-## double check the results for the test case (i==40)
-##------------------------------------------------------------------
-#tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[[tmp.id]]), hcmethod="single", plot=FALSE, verbose=FALSE)
-#tmp.d  <- as.dist(1-tmp.sim)
-#tmp.h  <- hclust(tmp.d, method="single")
-#cbind(tmp.h$height, tmp.lc$hclust$height)
 
 
 

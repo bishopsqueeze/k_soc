@@ -300,6 +300,10 @@ calcSimilarityMatrix <- function(myIgraph)
 }
 
 
+
+
+
+
 ##------------------------------------------------------------------
 ## <function> :: calcProfileSimilarityMatrix
 ##------------------------------------------------------------------
@@ -337,7 +341,7 @@ calcProfileSimilarityMatrix <- function(myIgraph, myProfMatrix)
     ##-------------------------------------------------------------
     ## populate the lower triangular matrix with similarity coefficients
     ##-------------------------------------------------------------
-    cat("calcSimilarityMatrix::non-parallel\n")
+    cat("calcProfileSimilarityMatrix :: non-parallel\n")
     for (i in 1:(edges.num-1)) {
         
         ## try to vectorize as much as possible

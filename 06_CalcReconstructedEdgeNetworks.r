@@ -48,8 +48,8 @@ load("02_SocialCircle_Edges.Rdata")         ## edge lists
 ##------------------------------------------------------------------
 ## Direcotry holding the topological & profile similarity data
 ##------------------------------------------------------------------
-simDirectory    <- "/Users/alexstephens/Development/kaggle/social_circle/data/inputs/sim"
-profDirectory   <- "/Users/alexstephens/Development/kaggle/social_circle/data/inputs/prof"
+profDirectory   <- "/Users/alexstephens/Development/kaggle/social_circle/data/inputs/profiles"
+
 
 ##------------------------------------------------------------------
 ## Loop over the egonets, define graph objects, save to file
@@ -69,7 +69,7 @@ colnames(reconLinkCount.mat)    <- c("n.edges", "n.recon")
 rownames(reconLinkCount.mat)    <- ego.names[egoedges.order]
 
 ## placeholder for the reconstructed edge list
-reconego.list <- list()
+recon_egoedges.list <- list()
 
 ##------------------------------------------------------------------
 ## loop over each egonet and "reconstruct" the network using the
@@ -98,9 +98,8 @@ for (k in 1:ego.num) {
     ##------------------------------------------------------------------
     load(paste(profDirectory, "/", paste0(tmp.id, ".ProfileMatrix.Rdata"), sep=""))
 
-
     ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ## Use the Wang & Gao routine to "reconstruct" the ego network
+    ## Use the Wang & Gao procedure to "reconstruct" the ego network
     ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     ##------------------------------------------------------------------
@@ -119,8 +118,9 @@ for (k in 1:ego.num) {
         
         ##------------------------------------------------------------------
         ## compute profile similarity
+        ##  - use the "reduced" profile (really "more informative") matrix
         ##------------------------------------------------------------------
-        prof.sim  <- calcCosineSimilarity( tmp.leafMatrix[,paste0("ID_",ei)], tmp.leafMatrix[,paste0("ID_",ej)])
+        prof.sim  <- calcCosineSimilarity( tmp.leafMatrixExDropsRows[,paste0("ID_",ei)], tmp.leafMatrixExDropsRows[,paste0("ID_",ej)])   ## reduced matrix
         
         ##------------------------------------------------------------------
         ## load the edge similarities into a matrix
@@ -130,7 +130,7 @@ for (k in 1:ego.num) {
     
     ## transform foreach results to a matrix
     edgeSimilarity.mat <- do.call("rbind", edgeSimilarity.list)
-    colnames(edgeSimilarity.mat)    <- c("topo","prof")
+    colnames(edgeSimilarity.mat)    <- c("topo", "prof")
     
     ## calculate median values
     topo.median <- median(edgeSimilarity.mat[,c("topo")])
@@ -154,7 +154,7 @@ for (k in 1:ego.num) {
             np_j        <- neighbors.list[[vj]]
             
             topo.sim    <- length(intersect(np_i, np_j)) / length(union(np_i, np_j))
-            prof.sim    <- calcCosineSimilarity( tmp.leafMatrix[,paste0("ID_",vi)], tmp.leafMatrix[,paste0("ID_",vj)])
+            prof.sim    <- calcCosineSimilarity( tmp.leafMatrixExDropsRows[,paste0("ID_",vi)], tmp.leafMatrixExDropsRows[,paste0("ID_",vj)])
             
             if ((i != j) & (topo.sim > topo.median) & (prof.sim > prof.median)) {
                 recon.adj[i,j] <- 1
@@ -174,15 +174,15 @@ for (k in 1:ego.num) {
    ##------------------------------------------------------------------
    ## Step 4: Transform adjacency matrix to an iGraph object and store
    ##------------------------------------------------------------------
-   tmp.iGraph               <-  graph.adjacency(recon.adj, mode=c("undirected"))
-   reconego.list[[tmp.id]]  <- tmp.iGraph
+   tmp.iGraph                     <-  graph.adjacency(recon.adj, mode=c("undirected"))
+   recon_egoedges.list[[tmp.id]]  <- tmp.iGraph
    
 }
 
 ##------------------------------------------------------------------
 ## Save the results
 ##------------------------------------------------------------------
-save(edgeSimilarity.mat, reconLinkCount.mat, reconego.list, file="06_CalcReconstructedEdgeNetworks.Rdata")
+save(edgeSimilarity.mat, reconLinkCount.mat, recon_egoedges.list, file="06_SocialCircle_ReconEdges.Rdata")
 
 
 

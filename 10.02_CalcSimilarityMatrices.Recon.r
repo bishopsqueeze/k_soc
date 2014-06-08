@@ -1,5 +1,11 @@
 ##------------------------------------------------------------------
+## This script is used to compute similarity matrices for the
+## et of "reconstructed" egonets that were based on the original
+## data provided by kaggle.  See "06_CalcReconstructedEdgeNetwork"
+## for details of the reconstruction process.
 ##
+## This script takes the "reconstructed" egonets and computes
+## similarity matrices for those networks.
 ##------------------------------------------------------------------
 
 ##------------------------------------------------------------------
@@ -18,7 +24,7 @@ rm(list=ls())
 ##------------------------------------------------------------------
 ## Define the parallel flag
 ##------------------------------------------------------------------
-DOPARALLEL  <- FALSE
+DOPARALLEL  <- TRUE
 
 ##------------------------------------------------------------------
 ## Register the clusters
@@ -43,49 +49,49 @@ source("/Users/alexstephens/Development/kaggle/social_circle/k_soc/00_Utilities.
 ## Read in the raw data files
 ##------------------------------------------------------------------
 load("01_SocialCircle_RawData.Rdata")       ## raw data
-load("02_SocialCircle_Edges.Rdata")         ## edge lists
+##load("02_SocialCircle_Edges.Rdata")       ## edge lists
+load("06_SocialCircle_ReconEdges.Rdata")    ## reconstructed network edge lists
 
 ##------------------------------------------------------------------
 ## Loop over the egonets, define graph objects, save to file
 ##------------------------------------------------------------------
 
 ## extract egonet data
-ego.names       <- sort(names(egoedges.list))
+ego.names       <- names(recon_egoedges.list)
 ego.num         <- length(ego.names)
 
 ## get the edge count for each, so we can work from smallest to largest
-egoedges.count  <- unlist(lapply(egoedges.list, ecount))
-egoedges.order  <- order(egoedges.count)
+recon_egoedges.count  <- unlist(lapply(recon_egoedges.list, ecount))
+recon_egoedges.order  <- order(recon_egoedges.count)
 
 ## define the ouput directory for individual edges files
-output.dir  <- paste(getwd(),"sim",sep="/")
+output.dir  <- paste(getwd(),"recon.sim.topo",sep="/")
 
 ## loop over each egonet and compute the similarity matrices
-for (i in 1:40) {
+for (i in 110:1) {
     
     ## set-up
-    tmp.id          <- ego.names[egoedges.order[i]]
-    tmp.edges       <- egoedges.list[[tmp.id]]
+    tmp.id          <- ego.names[recon_egoedges.order[i]]
+    tmp.edges       <- recon_egoedges.list[[tmp.id]]
     
     ## echo progress
-    cat("Iteration", i, "of", ego.num, " :: Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
+    cat("Iteration", i, "of", ego.num, " :: Similarity Matrix for", tmp.id, " :: <Reconstructed> # Edges =", ecount(tmp.edges), "\n")
     
     ## output files
-    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".SimilarityMatrix.Rdata"), sep="/")
+    tmp.rdataName   <- paste(output.dir, paste0(tmp.id,".ReconSimilarityMatrix.Rdata"), sep="/")
     
     ## compute the matrices
-    tmp.sim  <- calcSimilarityMatrix(tmp.edges)
+    tmp.reconSim  <- calcSimilarityMatrix(tmp.edges)
 
     ## write intermediate results to a file
-
-    save(tmp.sim, file=tmp.rdataName)
+    save(tmp.reconSim, file=tmp.rdataName)
 }
 
 
 ##------------------------------------------------------------------
 ## double check the results for the test case (i==40)
 ##------------------------------------------------------------------
-#tmp.lc <- getLinkCommunities(get.data.frame(egoedges.list[[tmp.id]]), hcmethod="single", plot=FALSE, verbose=FALSE)
+#tmp.lc <- getLinkCommunities(get.data.frame(recon_egoedges.list[[tmp.id]]), hcmethod="single", plot=FALSE, verbose=FALSE)
 #tmp.d  <- as.dist(1-tmp.sim)
 #tmp.h  <- hclust(tmp.d, method="single")
 #cbind(tmp.h$height, tmp.lc$hclust$height)

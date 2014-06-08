@@ -1,16 +1,5 @@
 ##------------------------------------------------------------------
-## The purpose of this script is to compute a "profile similarity"
-## matrix for each egonet, where the profile similarity represents
-## the level of similarity between two sets of feature vectors.
 ##
-## The feature vectors encode information about each individual
-## (e.g., name, birthday, education, work, etc.) ... so it serves
-## as another means of identifying common information within an
-## ego network.
-##
-## The script will compute similarity matrices for two types of
-## feature vector:  the full dataset, and subset of data that is
-## likely to elicit an acutal match.
 ##------------------------------------------------------------------
 
 ##------------------------------------------------------------------
@@ -29,7 +18,7 @@ rm(list=ls())
 ##------------------------------------------------------------------
 ## Define the parallel flag
 ##------------------------------------------------------------------
-DOPARALLEL  <- FALSE
+DOPARALLEL  <- TRUE
 
 ##------------------------------------------------------------------
 ## Register the clusters
@@ -61,7 +50,7 @@ load("02_SocialCircle_Edges.Rdata")         ## edge lists
 ##------------------------------------------------------------------
 
 ## extract egonet data
-ego.names       <- sort(names(egoedges.list))
+ego.names       <- names(egoedges.list)
 ego.num         <- length(ego.names)
 
 ## get the edge count for each, so we can work from smallest to largest
@@ -83,32 +72,33 @@ for (i in 110:1) {
     ##------------------------------------------------------------------
     ## echo progress
     ##------------------------------------------------------------------
-    cat("Iteration", i, "of", ego.num, " :: Profile Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
+    cat("Iteration", i, "of", ego.num, " :: User Profile Similarity Matrix for", tmp.id, " :: # Edges =", ecount(tmp.edges), "\n")
     
     ##------------------------------------------------------------------
-    ## load the profile matrix
+    ## load the profile matrix (called the leafMatrix
     ##------------------------------------------------------------------
-    load(paste0(getwd(),"/prof/",paste0(tmp.id,".ProfileMatrix.Rdata")))
+    tmp.profFile    <- paste0(getwd(),"/profiles/",paste0(tmp.id,".ProfileMatrix.Rdata"))
+    load(tmp.profFile)
     
     ##------------------------------------------------------------------
-    ## deifne output filenames
+    ## output files
     ##------------------------------------------------------------------
-    tmp.fullFeatureset      <- paste( paste(getwd(),"orig.sim.prof.full",sep="/"), paste0(tmp.id, ".FullProfileSimilarityMatrix.Rdata"), sep="/")
-    tmp.reducedFeatureset   <- paste( paste(getwd(),"orig.sim.prof.reduced",sep="/"), paste0(tmp.id, ".ReducedProfileSimilarityMatrix.Rdata"), sep="/")
+    tmp.fullFeatureset      <- paste( paste(getwd(),"orig.sim.user.full",sep="/"), paste0(tmp.id, ".UserFullProfileSimilarityMatrix.Rdata"), sep="/")
+    tmp.reducedFeatureset   <- paste( paste(getwd(),"orig.sim.user.reduced",sep="/"), paste0(tmp.id, ".UserReducedProfileSimilarityMatrix.Rdata"), sep="/")
     
     ##------------------------------------------------------------------
     ## compute the matrices & immediately write to file
     ##------------------------------------------------------------------
     
     ## full profile
-    tmp.fullProfileSim      <- calcProfileSimilarityMatrix(tmp.edges, tmp.leafMatrix)
-    save(tmp.fullProfileSim,    file=tmp.fullFeatureset)
-    
-    ## reduced profile
-    tmp.reducedProfileSim   <- calcProfileSimilarityMatrix(tmp.edges, tmp.leafMatrixExDropsRows)
-    save(tmp.reducedProfileSim, file=tmp.reducedFeatureset)
-}
+    tmp.fullUserProfileSim      <- calcEgoSimilarityMatrix(tmp.id, tmp.edges, tmp.leafMatrix)
+    save(tmp.fullUserProfileSim, file=tmp.fullFeatureset)
 
+    ## reduced profile
+    tmp.reducedUserProfileSim   <- calcEgoSimilarityMatrix(tmp.id, tmp.edges, tmp.leafMatrixExDropsRows)
+    save(tmp.reducedUserProfileSim, file=tmp.reducedFeatureset)
+
+}
 
 
 

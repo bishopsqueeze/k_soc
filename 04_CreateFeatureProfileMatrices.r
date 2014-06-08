@@ -55,7 +55,7 @@ egoedges.order  <- order(egoedges.count)
 ##------------------------------------------------------------------
 ## define the ouput directory for individual edges files
 ##------------------------------------------------------------------
-output.dir  <- paste(getwd(),"prof",sep="/")
+output.dir  <- paste(getwd(),"profiles",sep="/")
 
 ##------------------------------------------------------------------
 ## loop over all the egonets and load the profile matrices

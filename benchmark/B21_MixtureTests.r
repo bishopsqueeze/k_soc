@@ -43,7 +43,9 @@ load("02_SocialCircle_Edges.Rdata")         ## edge lists
 ##------------------------------------------------------------------
 ## Directories holding the topological & profile similarity data
 ##------------------------------------------------------------------
-simDirectory    <- "/Users/alexstephens/Development/kaggle/social_circle/data/inputs/sim"
+orig.sim.topo            <- "/Users/alexstephens/Development/kaggle/social_circle/data/inputs/orig.sim.topo"
+orig.sim.prof.reduced    <- "/Users/alexstephens/Development/kaggle/social_circle/data/inputs/orig.sim.prof.reduced"
+orig.sim.user.reduced    <- "/Users/alexstephens/Development/kaggle/social_circle/data/inputs/orig.sim.user.reduced"
 
 
 ##------------------------------------------------------------------

@@ -7,10 +7,10 @@
 ##------------------------------------------------------------------
 library(igraph)                 ## contains graph functions
 library(caTools)
-library(linkcomm)
-library(data.table)
+#library(linkcomm)
+#library(data.table)
 
-library(caret)
+#library(caret)
 library(foreach)
 library(doMC)
 
@@ -77,8 +77,8 @@ res       <- list()
 ##------------------------------------------------------------------
 ## for these tests loop over known circles only
 ##------------------------------------------------------------------
-for (i in 1:10) {
-#for (i in 1:train.num) { #train.num
+##for (i in 1:10) {
+for (i in 1:train.num) { #train.num
     
     ## set-up
     tmp.id          <- train.names[train.order[i]]
@@ -144,6 +144,7 @@ for (i in 1:10) {
         ## loop over the heights and extract fit statistics
         ##------------------------------------------------------------------
         tmp.summary <- list()
+        #for (h in 1:length(unq.h)) {
         tmp.summary <- foreach (h=1:length(unq.h)) %dopar% {
             
             ## extract the clusters at each height
@@ -174,8 +175,8 @@ for (i in 1:10) {
                                     dif.edits=(tmp.edits-cc.edits))
         }
         
-        ## save results
-        res[[tmp.id]][[sim.id]]  <- do.call("rbind", tmp.summary)
+    ## save results
+    res[[tmp.id]][[sim.id]]  <- do.call("rbind", tmp.summary)
     }
 }
 

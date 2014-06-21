@@ -57,7 +57,7 @@ orig.sim.user.reduced    <- "/Users/alexstephens/Development/kaggle/social_circl
 ##------------------------------------------------------------------
 ## Available clustering methods in hclust()
 ##------------------------------------------------------------------
-hc.methods <- c("ward.D", "ward.D2", "single", "complete", "average", "mcquitty") ## ("median", "centroid")
+hc.methods <- c("single", "mcquitty") ## ("ward.D", "ward.D2", "median", "centroid")
 #hc.methods <- c("average", "single")
 
 ##------------------------------------------------------------------
@@ -140,6 +140,7 @@ for (i in 1:train.num) { #train.num
         ## loop over the heights and extract fit statistics
         ##------------------------------------------------------------------
         tmp.summary <- list()
+        ##
         tmp.summary <- foreach (h=1:length(unq.h)) %dopar% {
     
             ## extract the clusters at each height
